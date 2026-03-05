@@ -4,14 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual Integral S.A.C.H. | Guía de Experto</title>
+    <title>Manual de Uso Amigable - Dra. Lucía Quintero</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -19,23 +15,13 @@
                     colors: {
                         primary: '#0F4C5C',
                         accent: '#00BFA6',
-                        background: '#F8FAFC',
+                        lila: 'rgba(180,130,210,0.18)',
+                        celeste: 'rgba(30,120,220,0.07)',
                         dark: '#0B1120',
-                        secondary: '#64748B',
-                        warning: '#F59E0B',
-                        danger: '#EF4444',
-                        success: '#10B981'
+                        jv: '#1E293B'
                     },
                     fontFamily: {
                         sans: ['Plus Jakarta Sans', 'sans-serif'],
-                        display: ['Inter', 'sans-serif'],
-                    },
-                    borderRadius: {
-                        'sach': '12px',
-                        'card': '24px',
-                    },
-                    boxShadow: {
-                        'soft': '0 10px 40px rgba(15, 76, 92, 0.08)',
                     }
                 }
             }
@@ -43,366 +29,262 @@
     </script>
     <style>
         body {
-            background-color: #F8FAFC;
-            scroll-behavior: smooth;
+            background-color: #FFFFFF;
+            color: #1E293B;
+            line-height: 1.7;
         }
 
-        .sidebar-link:hover {
-            color: #00BFA6;
-            background: rgba(0, 191, 166, 0.05);
+        .chapter-card {
+            transition: transform 0.3s ease;
         }
 
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+        .chapter-card:hover {
+            transform: translateY(-4px);
         }
 
-        pre {
-            background: #f1f5f9;
-            padding: 1rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            border-left: 4px solid #0F4C5C;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
         }
 
-        @media print {
-            .no-print {
-                display: none;
-            }
-
-            #manual-body {
-                padding: 0;
-            }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #E2E8F0;
+            border-radius: 10px;
         }
     </style>
 </head>
 
-<body class="font-sans text-dark antialiased">
+<body class="antialiased">
 
-    <!-- Header Fijo (Navegación Rápida) -->
-    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 no-print">
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">S</div>
-                <span class="font-display font-extrabold text-primary tracking-tight">Manual S.A.C.H. 2.0</span>
-            </div>
-            <div class="hidden md:flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-secondary">
-                <a href="#dashboard" class="sidebar-link px-3 py-2 rounded-lg transition-all">Dashboard</a>
-                <a href="#agenda" class="sidebar-link px-3 py-2 rounded-lg transition-all">Agenda</a>
-                <a href="#pacientes" class="sidebar-link px-3 py-2 rounded-lg transition-all">Pacientes</a>
-                <a href="#odontograma" class="sidebar-link px-3 py-2 rounded-lg transition-all">Odontograma</a>
-            </div>
-            <button onclick="downloadPDF()"
-                class="bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-accent transition-all shadow-soft overflow-hidden relative group">
-                <span class="relative z-10">Exportar PDF</span>
-                <div
-                    class="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                </div>
-            </button>
-        </div>
-    </nav>
-
-    <header class="bg-primary text-white pt-24 pb-32 px-6 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10">
-            <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <defs>
-                    <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5" />
-                    </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-        </div>
-        <div class="max-w-4xl mx-auto relative z-10 text-center">
-            <h1 class="text-5xl md:text-7xl font-display font-extrabold tracking-tighter mb-6 leading-none">Tu Clínica,
-                <span class="text-accent underline decoration-white/20 underline-offset-8">Sincronizada.</span></h1>
-            <p class="text-xl text-white/70 font-medium max-w-2xl mx-auto mb-8">Esta guía técnica y operativa detalla
-                todas las funciones que hemos probado y verificado para garantizar el éxito de la Dra. Lucía Quintero.
-            </p>
-            <div class="flex flex-wrap justify-center gap-4">
-                <div
-                    class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span> Sistema Verificado
-                </div>
-            </div>
-        </div>
+    <!-- PORTADA / HEADER -->
+    <header class="max-w-5xl mx-auto px-6 pt-16 pb-20 text-center">
+        <img src="logo-lucia.png" alt="Logo Dra. Lucía Quintero"
+            class="h-24 mx-auto mb-10 object-contain drop-shadow-sm">
+        <h1 class="text-4xl md:text-6xl font-extrabold text-primary tracking-tighter leading-none mb-4">
+            Guía Amigable <br> <span class="text-accent">S.A.C.H. Neo-Medical</span>
+        </h1>
+        <p class="text-slate-500 font-medium text-lg max-w-2xl mx-auto">
+            Bienvenido a su nuevo sistema. Esta guía ha sido escrita para que usarlo sea tan fácil como leer un cuento.
+        </p>
     </header>
 
-    <main id="manual-content" class="max-w-5xl mx-auto -mt-20 pb-24 px-6 relative z-20">
+    <main class="max-w-4xl mx-auto px-6 space-y-24 pb-32">
 
-        <!-- DASHBOARD -->
-        <section id="dashboard" class="mb-24">
-            <div class="bg-white rounded-card shadow-soft border border-slate-100 p-10">
-                <div class="flex items-center gap-4 mb-10">
-                    <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                                stroke-width="2" />
-                        </svg>
+        <!-- CAPÍTULO 1 -->
+        <section class="chapter-card bg-slate-50 p-8 md:p-12 rounded-[32px] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-4 mb-8">
+                <span
+                    class="w-12 h-12 bg-accent/10 text-accent rounded-full flex items-center justify-center font-bold text-xl">1</span>
+                <h2 class="text-2xl font-bold text-primary">El Comienzo: Luz de Semáforo</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-10 items-center">
+                <div class="space-y-4">
+                    <p class="text-slate-600">Arriba a la derecha verá un pequeño botón redondo que dice <span
+                            class="font-bold">"Connected"</span>.</p>
+                    <div class="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-emerald-100">
+                        <span
+                            class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        <p class="text-sm font-bold text-emerald-700">Luz Verde: Sistema Listo</p>
                     </div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">1. Dashboard: Control
-                        Maestro</h2>
+                    <p class="text-sm text-slate-500 italic">"Significa que el sistema está despierto y guardando todo
+                        lo que usted haga automáticamente en la nube."</p>
+                    <div class="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-red-100 mt-4">
+                        <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                        <p class="text-sm font-bold text-red-700">Luz Roja: Revise su Internet</p>
+                    </div>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div class="space-y-6">
-                        <h4 class="text-accent font-bold uppercase tracking-widest text-[10px]">Funcionamiento</h4>
-                        <p class="text-lg text-secondary">El Dashboard ofrece una visión 360° de la salud financiera y
-                            operativa de la clínica en tiempo real.</p>
-                        <ul class="space-y-4">
-                            <li class="flex gap-3">
-                                <span class="mt-1 text-success"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path d="M5 13l4 4L19 7" stroke-width="3" />
-                                    </svg></span>
-                                <div>
-                                    <p class="font-bold text-dark">Tarjetas de Métricas:</p>
-                                    <p class="text-sm text-secondary">Visualiza Ingresos Mensuales, Citas del Día y
-                                        Nuevos Pacientes al instante.</p>
-                                </div>
-                            </li>
-                            <li class="flex gap-3">
-                                <span class="mt-1 text-success"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path d="M5 13l4 4L19 7" stroke-width="3" />
-                                    </svg></span>
-                                <div>
-                                    <p class="font-bold text-dark">Gráficos Interactivos:</p>
-                                    <p class="text-sm text-secondary">Tendencia de citas y recaudación mensual con
-                                        gráficos dinámicos.</p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="bg-slate-50 p-6 rounded-card border border-black/5">
-                        <div class="flex items-center gap-2 mb-4 text-primary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" />
-                            </svg>
-                            <span class="text-[10px] font-bold uppercase">Tip Pro</span>
-                        </div>
-                        <p class="text-sm font-medium text-slate-600 italic">"Haz clic en un paciente reciente en la
-                            lista inferior para ir directo a su expediente clínico."</p>
-                    </div>
+                <div class="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                    <p class="text-primary font-bold text-sm mb-2 uppercase tracking-widest">Regla de Oro</p>
+                    <p class="text-slate-700 text-sm italic">"Si la luz está verde, quédese tranquila, su trabajo está
+                        protegido."</p>
                 </div>
             </div>
         </section>
 
-        <!-- AGENDA -->
-        <section id="agenda" class="mb-24">
-            <div class="bg-white rounded-card shadow-soft border border-slate-100 p-10">
-                <div class="flex items-center gap-4 mb-10">
-                    <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-600">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                stroke-width="2" />
-                        </svg>
-                    </div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">2. Agenda Multipropósito
-                    </h2>
+        <!-- CAPÍTULO 2 -->
+        <section class="chapter-card bg-white p-8 md:p-12 rounded-[32px] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-4 mb-8">
+                <span
+                    class="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-xl">2</span>
+                <h2 class="text-2xl font-bold text-primary">Conocer a los Pacientes</h2>
+            </div>
+            <p class="text-slate-600 mb-8">El sistema es visual para ayudarle a identificar de quién se trata con solo
+                mirar el color de la lista:</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="p-6 rounded-2xl border border-slate-100" style="background-color: rgba(180,130,210,0.18);">
+                    <h3 class="font-bold text-purple-700 mb-2">Fondo Lila</h3>
+                    <p class="text-xs text-purple-900/60 font-bold uppercase tracking-tight mb-4">Para Niños</p>
+                    <p class="text-sm text-purple-900/70 italic">"Si el paciente es menor de 18 años, el sistema lo
+                        pintará de lila suave automáticamente."</p>
                 </div>
-
-                <div class="space-y-12">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div class="bg-slate-50 p-8 rounded-card border border-black/5 space-y-4">
-                            <h3 class="text-xl font-bold text-primary">Gestión de Sillones</h3>
-                            <p class="text-secondary text-base">S.A.C.H. maneja un sistema de 3 sillones simultáneos.
-                                Cada columna representa un espacio físico de trabajo.</p>
-                            <div class="flex items-center gap-4 text-[10px] font-bold text-slate-400">
-                                <span class="px-2 py-1 bg-white border rounded">AMARILLO: Pendiente</span>
-                                <span
-                                    class="px-2 py-1 bg-emerald-100 text-emerald-600 border border-emerald-200 rounded">VERDE:
-                                    Confirmado</span>
-                            </div>
-                        </div>
-                        <div class="bg-slate-50 p-8 rounded-card border border-black/5 space-y-4">
-                            <h3 class="text-xl font-bold text-primary">Conflictos de Citas</h3>
-                            <p class="text-secondary text-base">El sistema tiene <strong>Prevención de
-                                    Traslape</strong>. No podrás agendar a dos pacientes en el mismo sillón y misma hora
-                                accidentalmente. El sistema lanzará una alerta roja si hay cruce.</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <h4 class="text-amber-600 font-bold uppercase tracking-widest text-[10px]">Acciones Avanzadas
-                        </h4>
-                        <div class="feature-grid">
-                            <div class="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                <p class="font-bold text-dark mb-2">Reagendar (Click Derecho)</p>
-                                <p class="text-xs text-secondary leading-relaxed">Al hacer <strong>clic derecho</strong>
-                                    sobre cualquier cita programada, se abrirá el modal de Reagendamiento Maestro para
-                                    cambiar fecha y hora rápidamente.</p>
-                            </div>
-                            <div class="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                <p class="font-bold text-dark mb-2">Confirmación Rápida</p>
-                                <p class="text-xs text-secondary leading-relaxed">Usa el botón de <strong>check
-                                        verde</strong> que aparece al pasar el mouse sobre la cita para marcarla como
-                                    confirmada sin entrar a editar.</p>
-                            </div>
-                            <div class="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                <p class="font-bold text-dark mb-2">Recordatorios T-24h</p>
-                                <p class="text-xs text-secondary leading-relaxed">Haz clic en el botón naranja
-                                    <strong>"Recordatorios"</strong> en la cabecera para ver quién tiene cita mañana y
-                                    enviar todos los recordatorios de WhatsApp en lote.</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="p-6 rounded-2xl border border-slate-100" style="background-color: rgba(30,120,220,0.07);">
+                    <h3 class="font-bold text-blue-700 mb-2">Fondo Azul Celeste</h3>
+                    <p class="text-xs text-blue-900/60 font-bold uppercase tracking-tight mb-4">Para Adultos</p>
+                    <p class="text-sm text-blue-900/70 italic">"Los pacientes de 18 años en adelante tendrán este tono
+                        azul refrescante."</p>
                 </div>
             </div>
         </section>
 
-        <!-- PACIENTES -->
-        <section id="pacientes" class="mb-24">
-            <div class="bg-white rounded-card shadow-soft border border-slate-100 p-10">
-                <div class="flex items-center gap-4 mb-10">
-                    <div class="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center text-accent">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                                stroke-width="2" />
-                        </svg>
-                    </div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">3. Expediente Clínico 2.0
-                    </h2>
-                </div>
-
-                <div class="space-y-8">
-                    <div class="p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-                        <p class="text-dark font-bold mb-2 flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                            Flujo de Registro
-                        </p>
-                        <p class="text-sm text-secondary">
-                            1. Haz clic en <strong>"+ Nuevo Paciente"</strong>.<br>
-                            2. Completa los campos obligatorios (Nombre, Cédula, Celular).<br>
-                            3. El sistema valida que la cédula sea única para evitar expedientes duplicados.
-                        </p>
-                    </div>
-
-                    <div id="odontograma" class="p-8 bg-slate-50 rounded-card border border-black/5">
-                        <h4 class="text-primary font-display font-extrabold text-xl mb-6">El Odontograma Interactivo
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="bg-white p-5 rounded-xl border shadow-sm">
-                                <p class="text-[9px] font-bold text-secondary uppercase tracking-widest mb-2">Paso 1:
-                                    Selección</p>
-                                <p class="text-sm font-bold text-dark mb-1">Toca las caras</p>
-                                <p class="text-xs text-secondary">Puedes seleccionar caras individuales (oclusal,
-                                    lingual, etc.) o el centro del diente.</p>
-                            </div>
-                            <div class="bg-white p-5 rounded-xl border shadow-sm">
-                                <p class="text-[9px] font-bold text-secondary uppercase tracking-widest mb-2">Paso 2:
-                                    Diagnóstico</p>
-                                <p class="text-sm font-bold text-dark mb-1">Menú de Estados</p>
-                                <p class="text-xs text-secondary">Selecciona Caries (Rojo), Endodoncia, Corona o Limpio.
-                                    Los símbolos se aplican instantáneamente.</p>
-                            </div>
-                            <div class="bg-white p-5 rounded-xl border shadow-sm border-emerald-200">
-                                <p class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-2">Paso 3:
-                                    Sincronización</p>
-                                <p class="text-sm font-bold text-emerald-700 mb-1">Auto-Presupuesto</p>
-                                <p class="text-xs text-secondary">Cada tratamiento indicado en el odontograma se agrega
-                                    **solito** a la lista de cobros.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- CAPÍTULO 3 -->
+        <section class="chapter-card bg-slate-50 p-8 md:p-12 rounded-[32px] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-4 mb-8">
+                <span
+                    class="w-12 h-12 bg-amber-500/10 text-amber-600 rounded-full flex items-center justify-center font-bold text-xl">3</span>
+                <h2 class="text-2xl font-bold text-primary">La Agenda: Dar una Cita</h2>
             </div>
-        </section>
-
-        <!-- FINANZAS -->
-        <section id="finanzas" class="mb-24">
-            <div class="bg-white rounded-card shadow-soft border border-slate-100 p-10">
-                <div class="flex items-center gap-4 mb-10">
+            <div class="space-y-6">
+                <p class="text-slate-600">Organizar su día es muy sencillo. No necesita buscar fechas complicadas:</p>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex gap-4">
                     <div
-                        class="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                stroke-width="2" />
-                        </svg>
-                    </div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">4. Cobros y Transparencia
-                    </h2>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <div class="space-y-6">
-                        <p class="text-lg text-secondary">El sistema de finanzas está diseñado para eliminar errores de
-                            cálculo manual.</p>
-                        <div class="space-y-4">
-                            <div class="p-5 bg-white border border-slate-100 rounded-xl">
-                                <p class="font-bold text-primary mb-1">Abonos Rápidos</p>
-                                <p class="text-sm text-secondary">Registra pagos en efectivo, transferencia o tarjeta.
-                                    El sistema actualiza el **Saldo Pendiente** del paciente en tiempo real.</p>
-                            </div>
-                            <div class="p-5 bg-white border border-slate-100 rounded-xl">
-                                <p class="font-bold text-primary mb-1">Catálogo de Tratamientos</p>
-                                <p class="text-sm text-secondary">¿No está en el odontograma? Agrégalo manualmente desde
-                                    el buscador de tratamientos en la pestaña de presupuesto.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-primary p-8 rounded-card text-white flex flex-col justify-center shadow-glow">
-                        <p class="text-accent font-bold uppercase tracking-widest text-[10px] mb-4">Módulo de Seguridad
-                        </p>
-                        <p class="text-xl font-display font-bold leading-tight mb-4">"El sistema evita que abones más
-                            del total del tratamiento para que nunca haya descuadres de caja."</p>
-                        <div class="h-1 w-20 bg-accent rounded-full"></div>
+                        class="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center font-bold shadow-sm">
+                        🗓</div>
+                    <div>
+                        <p class="font-bold text-dark mb-1 font-lg">Paso Maestro</p>
+                        <p class="text-sm text-slate-500">Busque al paciente, haga clic en su nombre y toque el botón
+                            azul que dice <span class="font-bold">"🗓 Agendar"</span>. El sistema lo llevará a la agenda
+                            y ya sabrá a quién va a atender.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- RESUMEN TÉCNICO -->
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-dark p-8 rounded-card text-white">
-                <p class="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-4">Base de Datos</p>
-                <p class="text-2xl font-bold font-display mb-2">Cloud Synced</p>
-                <p class="text-xs text-white/50">Tu información vive en Supabase, cifrada y siempre disponible desde
-                    cualquier dispositivo.</p>
+        <!-- CAPÍTULO 4 -->
+        <section
+            class="chapter-card bg-white p-8 md:p-12 rounded-[32px] border border-slate-100 shadow-sm border-l-8 border-l-accent">
+            <div class="flex items-center gap-4 mb-8">
+                <span
+                    class="w-12 h-12 bg-accent/10 text-accent rounded-full flex items-center justify-center font-bold text-xl">4</span>
+                <h2 class="text-2xl font-bold text-primary">Mapa Visual de los Dientes</h2>
             </div>
-            <div class="bg-white p-8 rounded-card border shadow-soft">
-                <p class="text-slate-400 text-[9px] font-bold uppercase tracking-widest mb-4">Soporte</p>
-                <p class="text-2xl font-bold font-display text-primary mb-2">WhatsApp Hub</p>
-                <p class="text-xs text-secondary">Botones de contacto directo integrados en cada cita para recordatorios
-                    instantáneos.</p>
+            <div class="space-y-6">
+                <p class="text-slate-600 italic">"Imagínese que es un libro de colorear digital para odontólogos."</p>
+                <ul class="space-y-6">
+                    <li class="flex gap-4">
+                        <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">🎨</div>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-dark">Haga clic en un
+                                diente:</span> Seleccione qué cara quiere pintar o si es todo el diente.</p>
+                    </li>
+                    <li class="flex gap-4">
+                        <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">📝</div>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-dark">Elija qué hizo:</span> ¿Fue
+                            una caries? ¿Una corona? Selecciónelo en el menú y el dibujo se actualizará solo.</p>
+                    </li>
+                    <li class="flex gap-4">
+                        <div
+                            class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center shrink-0">
+                            💰</div>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-dark">Ahorro de Tiempo:</span> Al
+                            marcar el tratamiento, el sistema anota cuánto cuesta automáticamente en la pestaña de
+                            dinero (Presupuesto).</p>
+                    </li>
+                </ul>
             </div>
-            <div class="bg-accent p-8 rounded-card text-white">
-                <p class="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-4">Seguridad</p>
-                <p class="text-2xl font-bold font-display mb-2">PWA Ready</p>
-                <p class="text-xs text-white/80">Instala el sistema como una App en tu celular para acceso rápido y
-                    fluido.</p>
+        </section>
+
+        <!-- CAPÍTULO 5 -->
+        <section class="chapter-card bg-slate-50 p-8 md:p-12 rounded-[32px] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-4 mb-8">
+                <span
+                    class="w-12 h-12 bg-emerald-500/10 text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">5</span>
+                <h2 class="text-2xl font-bold text-primary">El Dinero y los Abonos</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-10">
+                <div class="space-y-4">
+                    <p class="text-sm text-slate-600">Usted no necesita sumar nada. El sistema lo hace por usted.</p>
+                    <button
+                        class="bg-[#40E0D0]/20 text-[#008080] px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest border border-[#40E0D0]/30 border-dashed pointer-events-none">
+                        + Registrar Abono
+                    </button>
+                    <p class="text-sm text-slate-500">Use este botón para anotar lo que el paciente le entrega. Ya sea
+                        en efectivo, tarjeta o transferencia.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <p class="text-[10px] uppercase font-bold text-slate-400 mb-2">Consejo Importante:</p>
+                    <p class="text-sm text-slate-600 leading-relaxed italic">"Si entra al Tablero Principal y ve todo en
+                        <span class="text-primary font-extrabold">$0</span>, no se asuste. Es normal, solo significa que
+                        aún no hemos anotado ningún pago hoy. ¡El sistema está limpio y listo para empezar!"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CAPÍTULO 6 -->
+        <section class="chapter-card bg-white p-8 md:p-12 rounded-[32px] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-4 mb-8">
+                <span
+                    class="w-12 h-12 bg-indigo-500/10 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xl">6</span>
+                <h2 class="text-2xl font-bold text-primary">WhatsApp y Hojas Impresas</h2>
+            </div>
+            <div class="space-y-8">
+                <div class="flex items-start gap-4">
+                    <div
+                        class="w-14 h-14 bg-[#25D366]/10 text-[#25D366] rounded-2xl flex items-center justify-center shrink-0">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.662 1.435 5.176L2 22l4.957-1.303A9.954 9.954 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.63 0-3.17-.433-4.505-1.191l-.323-.186-2.943.774.787-2.868-.205-.326A7.957 7.957 0 0 1 4 12c0-4.411 3.589-8 8-8 4.411 0 8 3.589 8 8 0 4.411-3.589 8-8 8z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-dark text-lg mb-1">Mensaje Directo al Teléfono</h4>
+                        <p class="text-sm text-slate-500">Al registrar un paciente nuevo o recordar una cita, el sistema
+                            abre WhatsApp solo con un mensaje de lujo ya escrito. Usted solo tiene que darle a "Enviar".
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div
+                        class="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shrink-0">
+                        🖨️</div>
+                    <div>
+                        <h4 class="font-bold text-dark text-lg mb-1">Hojas de Reporte Perfectas</h4>
+                        <p class="text-sm text-slate-500">En el expediente del paciente verá el botón <span
+                                class="font-bold text-primary">"Imprimir"</span>. Haga clic y el sistema creará una hoja
+                            de alta calidad con el logo de la clínica para entregar al paciente.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AYUDA RÁPIDA -->
+        <section class="bg-primary p-10 md:p-14 rounded-[40px] text-white shadow-glow relative overflow-hidden">
+            <div
+                class="absolute top-0 right-0 w-64 h-64 bg-accent/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl">
+            </div>
+            <div class="relative z-10">
+                <h2 class="text-3xl font-extrabold mb-8 italic tracking-tight">Ayuda Rápida: "No entre en pánico"</h2>
+                <div class="grid md:grid-cols-2 gap-12">
+                    <div>
+                        <p class="font-bold text-accent uppercase text-[10px] tracking-widest mb-3">¿Qué hago si toqué
+                            algo y se rompió?</p>
+                        <p class="text-sm text-white/80 leading-relaxed">Solo <span
+                                class="font-bold text-white underline decoration-accent underline-offset-4">refresque la
+                                página</span> (presione F5 o el círculo de la flecha arriba). El sistema volverá a
+                            empezar perfecto siempre.</p>
+                    </div>
+                    <div>
+                        <p class="font-bold text-accent uppercase text-[10px] tracking-widest mb-3">¿Cómo sé si se
+                            guardó mi trabajo?</p>
+                        <p class="text-sm text-white/80 leading-relaxed">Toda acción importante (anotar un diente,
+                            guardar un abono o una cita) se guarda al instante. No hay un botón de "Guardar Archivo"
+                            porque el sistema ya lo hace automáticamente.</p>
+                    </div>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <footer
-        class="py-16 text-center text-slate-400 font-bold uppercase tracking-widest text-xs border-t border-slate-100 mx-6">
-        S.A.C.H. Neo-Medical System &copy; 2026 | Desarrollado con Pasión para la Dra. Lucía Quintero
+    <!-- FOOTER / JV CREATIVE -->
+    <footer class="bg-slate-50 border-t border-slate-100 py-20">
+        <div class="max-w-5xl mx-auto px-6 flex flex-col items-center">
+            <img src="logoJVCreative.svg" alt="Logo JVCreative" class="h-16 mb-6">
+            <div class="h-1 w-10 bg-accent mb-6 rounded-full"></div>
+            <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-2">Diseño de Experiencia y
+                Desarrollo por</p>
+            <p class="text-jv font-extrabold text-lg tracking-tight">JVCreative — Jhonny Vilera</p>
+            <p class="text-slate-400 text-[9px] font-bold mt-10">S.A.C.H. &copy; 2026 | Neo-Medical Clinical System</p>
+        </div>
     </footer>
 
-    <script>
-        function downloadPDF() {
-            const element = document.getElementById('manual-content');
-            const opt = {
-                margin: [0.5, 0.5, 0.5, 0.5],
-                filename: 'Manual_Completo_SACH_Lucia_Quintero.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    letterRendering: true
-                },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-            html2pdf().set(opt).from(element).save();
-        }
-    </script>
 </body>
 
 </html>
