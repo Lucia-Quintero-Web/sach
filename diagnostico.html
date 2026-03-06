@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SACH Diagnóstico</title>
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <h2>Diagnóstico de Módulos</h2>
+    <pre id="out"></pre>
+    <script>
+        const log = (msg) => {
+            console.log(msg);
+            document.getElementById('out').textContent += msg + '\n';
+        };
+
+        log('1. window.Dexie: ' + (typeof window.Dexie));
+        log('2. window.supabase: ' + (typeof window.supabase));
+
+        try {
+            const db = new window.Dexie('TestDB');
+            db.version(1).stores({ test: '++id' });
+            log('3. Dexie OK');
+        } catch (e) { log('3. Dexie ERROR: ' + e.message); }
+
+        try {
+            const client = window.supabase.createClient(
+                'https://uvzmnrahykwbamsgtmek.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2em1ucmFoeWt3YmFtc2d0bWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjY2NzYsImV4cCI6MjA4NzcwMjY3Nn0.Omb-mQnFdw1931gpJVnz6IfkkxAZvSP786BC6Up9VjU'
+            );
+            log('4. Supabase client OK');
+            client.from('PACIENTES').select('id').limit(1)
+                .then(({ data, error }) => {
+                    if (error) log('5. Query ERROR: ' + error.message);
+                    else log('5. Query PACIENTES OK, registros: ' + (data ? data.length : 0));
+                });
+        } catch (e) { log('4. Supabase ERROR: ' + e.message); }
+    </script>
+</body>
+
+</html>

@@ -167,6 +167,19 @@ window.setSachUser = (name) => {
     location.reload();
 };
 
+window.loginUserPrompt = (name, pass) => {
+    const input = prompt(`Contraseña para ${name}:`);
+    if (input === pass) {
+        window.setSachUser(name);
+    } else if (input !== null) {
+        alert('Contraseña incorrecta.');
+    }
+};
+
+window.openNewUserModal = () => {
+    alert('Función de Registro de Usuario: Se configurará en Supabase Auth próximamente.');
+};
+
 window.logout = async () => {
     const confirmed = confirm('¿Desea cerrar su sesión en S.A.C.H?');
     if (!confirmed) return;
@@ -229,14 +242,14 @@ async function showLoginOverlay() {
         const roleLabel = isAdmin ? 'Control Total (Admin)' : 'Especialista / Staff';
 
         return `
-                                <button onclick="window.setSachUser('${u.ODONTOLOGO}')" 
+                                <button onclick="window.loginUserPrompt('${u.ODONTOLOGO}', '${u.CLAVE}')" 
                                         class="w-full flex items-center gap-4 p-4 bg-slate-50 hover:bg-white hover:shadow-xl rounded-2xl border border-black/0 hover:border-black/5 transition-all group text-left">
                                     <div class="w-12 h-12 rounded-xl ${colorClass} text-white flex items-center justify-center text-lg font-display font-bold shadow-soft group-hover:scale-110 transition-transform">
                                         ${u.ODONTOLOGO?.charAt(5) === '.' ? u.ODONTOLOGO.charAt(5) : u.ODONTOLOGO?.charAt(0)}
                                     </div>
                                     <div class="overflow-hidden">
                                         <p class="text-dark font-bold text-sm leading-tight truncate">${u.ODONTOLOGO}</p>
-                                        <p class="${isAdmin ? 'text-accent' : 'text-slate-400'} text-[9px] font-black uppercase tracking-widest mt-0.5">${u.ESPECIALIDAD || roleLabel}</p>
+                                        <p class="${isAdmin ? 'text-accent' : 'text-slate-400'} text-[9px] font-black uppercase tracking-widest mt-0.5">${roleLabel}</p>
                                     </div>
                                 </button>
                             `;

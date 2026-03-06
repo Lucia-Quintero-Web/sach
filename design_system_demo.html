@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.A.C.H. - Design System Demo</title>
+    <link rel="stylesheet" href="css/globals.css">
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+    <div class="sach-modal shadow-2xl">
+        <h2 class="text-2xl font-bold mb-6 text-dark" style="color: #0F4C5C; margin-bottom: 24px;">Demostración de
+            Simetría UI</h2>
+
+        <div class="space-y-6">
+            <!-- Buttons Demo -->
+            <div class="mb-8">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Botones (Unset vs Set)</p>
+                <div class="flex gap-4">
+                    <button class="sach-button variant-unset">No Seteado</button>
+                    <button class="sach-button variant-set">Seteado (Activo)</button>
+                </div>
+            </div>
+
+            <!-- Inputs Demo -->
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Inputs (Transición de Estado)
+                </p>
+                <div class="space-y-4">
+                    <div class="sach-input-container">
+                        <input type="text" class="sach-input" placeholder="Campo Vacío (Unset)">
+                    </div>
+                    <div class="sach-input-container">
+                        <input type="text" class="sach-input" value="Datos Ingresados (Set)" placeholder=" ">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="sach-button variant-unset">Cancelar</button>
+            <button class="sach-button variant-set" style="background-color: #00BFA6;">Confirmar Acción</button>
+        </div>
+    </div>
+
+</body>
+
+</html>

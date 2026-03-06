@@ -370,7 +370,9 @@ async function loadAjustesUsuarios() {
 
     container.innerHTML = `
         <div class="grid grid-cols-1 gap-4">
-            ${data.map(u => `
+            ${data.map(u => {
+        const isAdmin = ["DRA. LUCIA QUINTERO", "ADMINISTRADORSACH", "LUCIA QUINTERO"].includes(u.ODONTOLOGO?.toUpperCase());
+        return `
                 <div class="bg-slate-50 rounded-2xl p-5 border border-black/5 flex items-center justify-between group hover:bg-white transition-all">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
@@ -378,7 +380,9 @@ async function loadAjustesUsuarios() {
                         </div>
                         <div>
                             <h4 class="font-bold text-dark text-sm">${u.ODONTOLOGO}</h4>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${u.ESPECIALIDAD || 'General'}</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                ${isAdmin ? 'Administrador' : 'Personal Especialista'}
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -387,7 +391,7 @@ async function loadAjustesUsuarios() {
                         </button>
                     </div>
                 </div>
-            `).join('')}
+            `}).join('')}
         </div>
     `;
 }
@@ -396,10 +400,21 @@ window.openNewUserModal = () => {
     alert('Función de Registro de Usuario: Se integrará con el flujo de Supabase Auth en la próxima fase.');
 };
 
-window.editUserPassword = (id) => {
+window.editUserPassword = async (id) => {
     const newPass = prompt('Ingrese la nueva clave para el odontólogo:');
-    if (newPass) {
-        alert('Clave actualizada correctamente (Simulado).');
+    if (newPass && newPass.trim() !== '') {
+        try {
+            const { error } = await supabase
+                .from('ODONTOLOGOS')
+                .update({ CLAVE: newPass.trim() })
+                .eq('id', id);
+
+            if (error) throw error;
+            showAjustesToast('success', 'Clave actualizada correctamente.');
+        } catch (err) {
+            console.error('[SACH] Error actualizando clave:', err);
+            showAjustesToast('error', 'No se pudo actualizar la clave.');
+        }
     }
 };
 
