@@ -76,6 +76,11 @@ export function openAjustesModal() {
             <div class="flex items-center justify-between px-8 py-5 border-t border-black/5 bg-slate-50/60 flex-shrink-0">
                 <p id="ajustes-count" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">— tratamientos</p>
                 <div class="flex gap-3">
+                    <button onclick="window.openNewTratamientoModal()"
+                            class="px-4 py-3 bg-white border border-primary text-primary rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-primary/5 transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2.5"/></svg>
+                        Nuevo
+                    </button>
                     <button onclick="window.closeAjustesModal()"
                             class="px-6 py-3 bg-white border border-black/5 text-slate-500 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all shadow-sm">
                         Cancelar
@@ -464,4 +469,100 @@ function showAjustesToast(type, message, count = 0) {
         toast.style.transition = 'opacity 0.4s';
     }, 4500);
     setTimeout(() => toast.remove(), 5000);
+}
+
+// ── Modal para Nuevo Tratamiento ──
+window.openNewTratamientoModal = () => {
+    const overlay = document.getElementById('ajustes-modal-overlay');
+    if (!overlay) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'new-tratamiento-modal';
+    modal.className = 'fixed inset-0 z-[11000] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-md" onclick="window.closeNewTratamientoModal()"></div>
+        <div class="relative bg-white rounded-[24px] shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 fade-in duration-300">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-display font-extrabold text-dark">Nuevo Tratamiento</h3>
+                <button onclick="window.closeNewTratamientoModal()" class="w-8 h-8 bg-slate-100 text-slate-400 rounded-lg flex items-center justify-center hover:bg-slate-200 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
+                </button>
+            </div>
+            <form id="new-tratamiento-form" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre del Tratamiento</label>
+                    <input type="text" id="new-trat-nombre" required
+                           class="w-full mt-1 px-4 py-3 text-sm font-bold text-dark bg-slate-50 border border-black/5 rounded-xl outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                           placeholder="Ej: Limpieza Dental">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Categoría</label>
+                    <select id="new-trat-categoria" required
+                            class="w-full mt-1 px-4 py-3 text-sm font-bold text-dark bg-slate-50 border border-black/5 rounded-xl outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent">
+                        <option value="NIÑO">NIÑO</option>
+                        <option value="ADULTO">ADULTO</option>
+                        <option value="AMBOS">AMBOS</option>
+                        <option value="General">General</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Valor (USD)</label>
+                    <input type="number" id="new-trat-valor" required min="0" step="0.01"
+                           class="w-full mt-1 px-4 py-3 text-sm font-bold text-dark bg-slate-50 border border-black/5 rounded-xl outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                           placeholder="0.00">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="window.closeNewTratamientoModal()"
+                            class="flex-1 py-3 bg-slate-100 text-slate-500 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-200 transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="flex-1 py-3 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all"
+                            style="background: linear-gradient(135deg,#0F4C5C,#00BFA6);">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('new-tratamiento-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombre = document.getElementById('new-trat-nombre').value.trim();
+        const categoria = document.getElementById('new-trat-categoria').value;
+        const valor = parseFloat(document.getElementById('new-trat-valor').value);
+
+        if (!nombre || isNaN(valor) || valor < 0) {
+            showAjustesToast('error', 'Completa todos los campos correctamente.');
+            return;
+        }
+
+        try {
+            const { error } = await supabase.from('TRATAMIENTOS').insert([{
+                TRATAMIENTO: nombre,
+                CATEGORIA: categoria,
+                VALOR: valor
+            }]);
+
+            if (error) throw error;
+
+            showAjustesToast('success', 'Tratamiento agregado correctamente.');
+            window.closeNewTratamientoModal();
+            loadTratamientos();
+        } catch (err) {
+            console.error('[SACH] Error guardando tratamiento:', err);
+            showAjustesToast('error', 'No se pudo guardar el tratamiento.');
+        }
+    });
+};
+
+window.closeNewTratamientoModal = () => {
+    const modal = document.getElementById('new-tratamiento-modal');
+    if (modal) modal.remove();
+};
+
+function loadAjustesTratamientos() {
+    loadTratamientos();
 }

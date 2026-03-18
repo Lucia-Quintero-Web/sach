@@ -5,16 +5,31 @@ export async function renderDashboardView(container) {
     // Estado de la gráfica (persiste mientras la sesión esté activa en esta vista)
     if (!window._dashboardChartMode) window._dashboardChartMode = 'monthly'; // 'monthly', 'weekly', 'daily'
 
+    const now = new Date();
+    const todayISO = now.toISOString().split('T')[0];
+
     const { count: patientCount } = await supabase.from('PACIENTES').select('*', { count: 'exact', head: true });
     const { count: appointmentCount } = await supabase.from('CITAS').select('*', { count: 'exact', head: true });
     const { data: abonos } = await supabase.from('ABONO').select('ABONO, FECHA, created_at');
 
+    // Nuevos pacientes este mes
+    const { data: allPacientes } = await supabase.from('PACIENTES').select('created_at');
+    const newPatientsThisMonth = (allPacientes || []).filter(p => {
+        const d = new Date(p.created_at);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).length;
+
+    // Citas pendientes (futuras)
+    const { data: upcomingAppointments } = await supabase.from('CITAS')
+        .select('*')
+        .gte('FECHA DE CITA', todayISO);
+    const pendingAppointments = (upcomingAppointments || []).length;
+
     const abonosList = abonos || [];
     const totalEarnings = abonosList.reduce((sum, a) => sum + (parseFloat(a.ABONO) || 0), 0);
-    const todayISO = new Date().toISOString().split('T')[0];
+    const avgEarningsPerPatient = patientCount > 0 ? totalEarnings / patientCount : 0;
 
     // ── META DEL MES ──
-    const now = new Date();
     const monthEarnings = abonosList.filter(a => {
         const d = new Date(a.created_at || a.FECHA);
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
@@ -41,69 +56,80 @@ export async function renderDashboardView(container) {
     recentAppointments.sort((a, b) => (a['HORA DE CITA'] || '').localeCompare(b['HORA DE CITA'] || ''));
 
     container.innerHTML = `
-        <div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div class="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8 md:pb-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-4">
                 <div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">Panel de Gestión</h2>
-                    <p class="text-secondary text-sm font-medium mt-1">S.A.C.H. Lucía Quintero <span class="mx-2">•</span> <span class="text-accent font-bold">Neo-Medical Performance</span></p>
+                    <h2 class="text-2xl md:text-3xl font-display font-extrabold text-dark tracking-tight">Panel de Gestión</h2>
+                    <p class="text-secondary text-sm font-medium mt-1">S.A.C.H. Lucía Quintero <span class="mx-1 md:mx-2">•</span> <span class="text-accent font-bold">Neo-Medical Performance</span></p>
                 </div>
-                <div class="flex gap-3">
-                    <button onclick="window.dispatchView('agenda')" class="sach-button variant-set bg-accent shadow-soft !h-11">Nueva Cita</button>
-                    <button onclick="window.dispatchView('abonos')" class="sach-button variant-unset bg-white border border-black/5 shadow-soft !h-11 font-bold">Ver Finanzas</button>
+                <div class="flex gap-2 md:gap-3 w-full md:w-auto">
+                    <button onclick="window.dispatchView('agenda')" class="sach-button variant-set bg-accent shadow-soft !h-10 md:!h-11 text-xs md:text-sm flex-1 md:flex-none">Nueva Cita</button>
+                    <button onclick="window.dispatchView('abonos')" class="sach-button variant-unset bg-white border border-black/5 shadow-soft !h-10 md:!h-11 font-bold text-xs md:text-sm flex-1 md:flex-none">Ver Finanzas</button>
                 </div>
             </div>
 
             <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3 md:gap-6">
                 ${renderStatCard('Citas para Hoy', recentAppointments.length, 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', 'text-primary bg-primary/10')}
                 ${renderStatCard('Pacientes Activos', patientCount, 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'text-accent bg-accent/10')}
+                ${renderStatCard('Nuevos (Este Mes)', newPatientsThisMonth, 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', 'text-purple-600 bg-purple-50')}
+                ${renderStatCard('Citas Pendientes', pendingAppointments, 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', 'text-orange-500 bg-orange-50')}
                 ${renderStatCard('Ingresos Globales', formatCurrency(totalEarnings), 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2', 'text-emerald-600 bg-emerald-50')}
+                ${renderStatCard('Promedio/Paciente', formatCurrency(avgEarningsPerPatient), 'M9 7h6m0 10v-3m-4 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', 'text-blue-600 bg-blue-50')}
                 ${renderStatCard('Citas Totales', appointmentCount, 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2', 'text-amber-500 bg-amber-50')}
             </div>
 
             <!-- 🎯 META DEL MES -->
             ${renderGoalCard(monthEarnings, goalAmount, goalProgress, isGoalMet)}
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                 <!-- Revenue Chart Container -->
-                <div class="lg:col-span-8 bg-white rounded-[32px] shadow-soft border border-black/5 p-8 flex flex-col min-h-[500px]">
-                    <div class="flex flex-col sm:flex-row items-center justify-between mb-10 gap-4">
+                <div class="lg:col-span-7 xl:col-span-8 bg-white rounded-[24px] md:rounded-[32px] shadow-soft border border-black/5 p-5 md:p-8 flex flex-col min-h-[400px] lg:min-h-[500px]">
+                    <div class="flex flex-col sm:flex-row items-center justify-between mb-6 md:mb-10 gap-3 md:gap-4">
                         <div>
-                            <h3 class="font-display font-bold text-xl text-dark">Rendimiento Financiero</h3>
+                            <h3 class="font-display font-bold text-lg md:text-xl text-dark">Rendimiento Financiero</h3>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Análisis por ${window._dashboardChartMode === 'monthly' ? 'Meses' : window._dashboardChartMode === 'weekly' ? 'Semanas' : 'Días'}</p>
                         </div>
                         <div class="flex bg-slate-50 p-1.5 rounded-2xl border border-black/5">
-                            <button onclick="window.setChartMode('monthly')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all ${window._dashboardChartMode === 'monthly' ? 'bg-white shadow-soft text-primary' : 'text-secondary hover:text-dark'}">Mensual</button>
-                            <button onclick="window.setChartMode('weekly')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all ${window._dashboardChartMode === 'weekly' ? 'bg-white shadow-soft text-primary' : 'text-secondary hover:text-dark'}">Semanal</button>
-                            <button onclick="window.setChartMode('daily')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all ${window._dashboardChartMode === 'daily' ? 'bg-white shadow-soft text-primary' : 'text-secondary hover:text-dark'}">Diario</button>
+                            <button onclick="window.setChartMode('monthly')" class="px-3 md:px-5 py-2 rounded-xl text-xs font-bold transition-all ${window._dashboardChartMode === 'monthly' ? 'bg-white shadow-soft text-primary' : 'text-secondary hover:text-dark'}">Mensual</button>
+                            <button onclick="window.setChartMode('weekly')" class="px-3 md:px-5 py-2 rounded-xl text-xs font-bold transition-all ${window._dashboardChartMode === 'weekly' ? 'bg-white shadow-soft text-primary' : 'text-secondary hover:text-dark'}">Semanal</button>
+                            <button onclick="window.setChartMode('daily')" class="px-3 md:px-5 py-2 rounded-xl text-xs font-bold transition-all ${window._dashboardChartMode === 'daily' ? 'bg-white shadow-soft text-primary' : 'text-secondary hover:text-dark'}">Diario</button>
                         </div>
                     </div>
                     
-                    <div class="flex-grow flex items-end justify-between gap-4 px-2" id="revenue-chart">
+                    <div class="flex-grow flex items-end justify-between gap-2 md:gap-4 px-1 md:px-2" id="revenue-chart">
                         ${processChartData(abonosList, window._dashboardChartMode)}
                     </div>
                 </div>
 
                 <!-- Upcoming Appointments -->
-                <div class="lg:col-span-4 bg-white rounded-[32px] shadow-soft border border-black/5 p-8 flex flex-col h-[500px]">
-                    <div class="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 class="font-display font-bold text-xl text-dark">Agenda Hoy</h3>
-                            <p class="text-[10px] font-bold text-accent uppercase tracking-widest mt-1">${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long' })}</p>
+                <div class="lg:col-span-5 xl:col-span-4 bg-gradient-to-br from-white to-slate-50 rounded-[20px] md:rounded-[28px] shadow-soft border border-primary/10 p-4 md:p-6 flex flex-col min-h-[350px] lg:min-h-[450px]">
+                    <div class="flex items-center justify-between mb-4 md:mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-display font-bold text-base md:text-lg text-dark">Agenda Hoy</h3>
+                                <p class="text-[9px] md:text-[10px] font-bold text-accent uppercase tracking-widest mt-0.5">${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long' })}</p>
+                            </div>
                         </div>
-                        <span class="w-2.5 h-2.5 rounded-full bg-accent animate-ping shadow-glow"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 bg-accent/20 text-accent text-[10px] font-bold rounded-lg">${recentAppointments.length}</span>
+                            <span class="w-2 h-2 rounded-full bg-accent animate-pulse shadow-glow"></span>
+                        </div>
                     </div>
                     
-                    <div class="space-y-4 overflow-y-auto pr-2 flex-grow custom-scrollbar">
+                    <div class="space-y-2 md:space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar max-h-[250px] lg:max-h-[300px]">
                         ${recentAppointments.length > 0 ? recentAppointments.map(renderAptItem).join('') : `
-                            <div class="h-full flex flex-col items-center justify-center opacity-20 gap-4 grayscale">
-                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="1.5"/></svg>
-                                <p class="text-sm font-bold">No hay citas programadas</p>
+                            <div class="h-full flex flex-col items-center justify-center opacity-25 gap-3">
+                                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="1.5"/></svg>
+                                <p class="text-xs font-bold">No hay citas programadas</p>
                             </div>
                         `}
                     </div>
 
-                    <button onclick="window.dispatchView('agenda')" class="w-full mt-6 py-4 sach-button variant-unset text-[10px] font-bold uppercase tracking-widest bg-slate-50 hover:bg-slate-100 border-none">Ver Calendario Completo</button>
+                    <button onclick="window.dispatchView('agenda')" class="w-full mt-3 md:mt-4 py-2.5 md:py-3 sach-button variant-set text-[9px] md:text-[10px] font-bold uppercase tracking-widest">Ver Calendario Completo</button>
                 </div>
             </div>
         </div>
@@ -126,65 +152,63 @@ function renderGoalCard(monthEarnings, goalAmount, goalProgress, isGoalMet) {
     const goal = goalAmount.toLocaleString('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 
     return `
-        <div class="bg-white rounded-[32px] shadow-soft border border-black/5 px-8 py-7 relative overflow-hidden
+        <div class="bg-white rounded-[18px] md:rounded-[24px] shadow-soft border border-black/5 px-4 md:px-6 py-4 md:py-5 relative overflow-hidden
                     ${isGoalMet ? 'ring-2 ring-[#39FF14]/40' : ''}">
 
             <!-- Fondo decorativo sutil -->
             <div class="absolute inset-0 bg-gradient-to-br from-[#39FF14]/3 via-transparent to-[#00BFA6]/5 pointer-events-none"></div>
 
-            <div class="relative flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div class="relative flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-4">
 
                 <!-- Ícono + Título -->
-                <div class="flex items-center gap-4 flex-shrink-0">
-                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm
+                <div class="flex items-center gap-2 lg:gap-3 flex-shrink-0">
+                    <div class="w-9 lg:w-10 h-9 lg:h-10 rounded-xl flex items-center justify-center shadow-sm
                                 ${isGoalMet ? 'bg-[#39FF14]/20 text-[#1a7a00]' : 'bg-primary/10 text-primary'}">
-                        <span class="text-2xl">${isGoalMet ? '🏆' : '🎯'}</span>
+                        <span class="text-lg lg:text-xl">${isGoalMet ? '🏆' : '🎯'}</span>
                     </div>
                     <div>
-                        <h3 class="font-display font-extrabold text-dark tracking-tight text-base">Meta de Recaudación Mensual</h3>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${currentMonth} ${new Date().getFullYear()}</p>
+                        <h3 class="font-display font-extrabold text-dark tracking-tight text-xs md:text-sm">Meta de Recaudación Mensual</h3>
+                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${currentMonth} ${new Date().getFullYear()}</p>
                     </div>
                 </div>
 
                 <!-- Barra de Progreso (zona principal) -->
                 <div class="flex-grow w-full">
                     ${isGoalMet ? `
-                        <div class="flex items-center gap-3 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-2xl px-5 py-3.5 mb-3">
-                            <span class="text-xl">🏆</span>
-                            <p class="font-extrabold text-[#116600] text-sm tracking-tight">
-                                ¡Felicidades Dra. Lucía! Meta cumplida este mes.
-                                <span class="font-medium text-[#1a7a00]/70 text-xs ml-1">Sigue así — eres increíble.</span>
+                        <div class="flex items-center gap-2 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-xl px-3 md:px-4 py-2 mb-2">
+                            <span class="text-base md:text-lg">🏆</span>
+                            <p class="font-extrabold text-[#116600] text-[10px] md:text-xs tracking-tight">
+                                ¡Meta cumplida este mes!
                             </p>
                         </div>
                     ` : ''}
 
                     <!-- Pista de la barra -->
-                    <div class="relative h-5 bg-slate-100 rounded-full overflow-hidden w-full">
+                    <div class="relative h-4 bg-slate-100 rounded-full overflow-hidden w-full">
                         <!-- Barra coloreada (empieza en 0, se anima via JS) -->
                         <div id="goal-progress-bar"
                              style="width:0%; background: linear-gradient(90deg, #00BFA6, #39FF14); box-shadow: 0 0 14px rgba(57,255,20,0.45);"
                              class="absolute inset-y-0 left-0 rounded-full transition-none">
                         </div>
                         <!-- Texto centrado dentro de la pista -->
-                        <span class="absolute inset-0 flex items-center justify-center text-[9px] font-extrabold uppercase tracking-widest
+                        <span class="absolute inset-0 flex items-center justify-center text-[8px] font-extrabold uppercase tracking-widest
                                      ${goalProgress > 45 ? 'text-white/90' : 'text-slate-500'}">
                             ${goalProgress.toFixed(0)}%
                         </span>
                     </div>
 
                     <!-- Texto debajo de la barra -->
-                    <p class="text-[11px] font-bold text-slate-500 mt-2.5">
-                        Llevamos <span class="text-primary font-extrabold">${earned}</span>
-                        de <span class="text-dark font-extrabold">${goal}</span>
-                        <span class="ml-1 text-slate-400">(${goalProgress.toFixed(1)}%)</span>
+                    <p class="text-[9px] md:text-[10px] font-bold text-slate-500 mt-1.5 md:mt-2">
+                        <span class="text-primary font-extrabold">${earned}</span>
+                        / <span class="text-dark font-extrabold">${goal}</span>
                     </p>
                 </div>
 
                 <!-- Botón Editar Meta -->
                 <button onclick="window.openGoalEditor()" title="Editar meta del mes"
-                        class="flex-shrink-0 w-11 h-11 bg-slate-50 hover:bg-slate-100 border border-black/5 rounded-2xl
+                        class="flex-shrink-0 w-8 h-8 lg:w-9 lg:h-9 bg-slate-50 hover:bg-slate-100 border border-black/5 rounded-xl
                                flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm group">
-                    <svg class="w-5 h-5 group-hover:rotate-45 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-width="2"/>
                         <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/>
                     </svg>
@@ -338,13 +362,13 @@ window.setChartMode = (mode) => {
 
 function renderStatCard(title, value, svgPath, colorClasses) {
     return `
-        <div class="bg-white p-8 rounded-[28px] shadow-soft border border-black/5 flex items-center justify-between group hover:-translate-y-1 transition-all duration-300">
-            <div class="space-y-2">
-                <p class="text-secondary text-[10px] font-bold uppercase tracking-widest opacity-60">${title}</p>
-                <h3 class="text-3xl font-display font-extrabold text-dark tabular-nums tracking-tighter">${value}</h3>
+        <div class="bg-white p-3 md:p-5 lg:p-6 rounded-[17px] md:rounded-[24px] shadow-soft border border-black/5 flex items-center justify-between group hover:-translate-y-1 transition-all duration-300">
+            <div class="space-y-1">
+                <p class="text-secondary text-[8px] md:text-[9px] font-bold uppercase tracking-widest opacity-60">${title}</p>
+                <h3 class="text-lg md:text-xl lg:text-2xl font-display font-extrabold text-dark tabular-nums tracking-tighter">${value}</h3>
             </div>
-            <div class="w-14 h-14 ${colorClasses} rounded-[18px] flex items-center justify-center shadow-sm">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="${svgPath}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="w-9 md:w-10 lg:w-12 h-9 md:h-10 lg:h-12 ${colorClasses} rounded-[12px] md:rounded-[15px] flex items-center justify-center shadow-sm">
+                <svg class="w-4 md:w-5 lg:w-6 h-4 md:h-5 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="${svgPath}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
         </div>
     `;
@@ -352,19 +376,21 @@ function renderStatCard(title, value, svgPath, colorClasses) {
 
 function renderAptItem(apt) {
     return `
-        <div class="p-3.5 rounded-2xl border border-black/5 bg-[#40E0D0]/50 hover:bg-[#40E0D0]/70 hover:shadow-soft hover:border-[#40E0D0]/30 transition-all group cursor-pointer" onclick="window.dispatchView('agenda')">
-            <div class="flex items-center justify-between mb-2">
-                <div class="px-2.5 py-0.5 bg-white border border-black/5 rounded-lg text-[9px] font-extrabold text-[#008080] shadow-sm tabular-nums">
-                    ${apt['HORA DE CITA']}
-                </div>
-                <div class="text-[8px] font-black text-[#006666]/60 uppercase tracking-tighter">
-                   ${apt['NUMERO SILLON'] ? 'SILLÓN ' + apt['NUMERO SILLON'] : 'POR CONFIRMAR'}
+        <div class="p-2.5 md:p-3 rounded-lg md:rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer" onclick="window.dispatchView('agenda')">
+            <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                    <div class="px-2 py-0.5 bg-primary text-white rounded-md text-[8px] md:text-[9px] font-bold shadow-sm">
+                        ${apt['HORA DE CITA']}
+                    </div>
+                    <div class="text-[7px] md:text-[8px] font-semibold text-primary/60 uppercase tracking-tight">
+                       ${apt['NUMERO SILLON'] ? 'SILLÓN '+apt['NUMERO SILLON'] : 'POR CONFIRMAR'}
+                    </div>
                 </div>
             </div>
-            <h4 class="font-bold text-dark text-xs truncate group-hover:text-[#004d4d] transition-colors">${apt['NOMBRE DEL PACIENTE']}</h4>
-            <div class="flex items-center gap-1.5 mt-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm ring-1 ring-black/5"></span>
-                <span class="text-[8px] font-extrabold text-dark/50 truncate uppercase tracking-tight">${apt['MOTIVO DE CONSULTA'] || 'ODONTOLOGÍA GENERAL'}</span>
+            <h4 class="font-bold text-dark text-[10px] md:text-xs truncate group-hover:text-primary transition-colors">${apt['NOMBRE DEL PACIENTE']}</h4>
+            <div class="flex items-center gap-1.5 mt-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-accent shadow-sm"></span>
+                <span class="text-[7px] md:text-[8px] font-medium text-dark/50 truncate uppercase tracking-tight">${apt['MOTIVO DE CONSULTA'] || 'ODONTOLOGÍA GENERAL'}</span>
             </div>
         </div>
     `;

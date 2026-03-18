@@ -79,14 +79,14 @@ export class Odontogram {
         const isAdult = this.viewMode === 'adulto';
 
         this.container.innerHTML = `
-            <div class="odontogram-wrapper relative p-6 bg-white rounded-[32px] shadow-soft border border-slate-50 transition-all duration-500 overflow-hidden">
+            <div class="odontogram-wrapper relative p-4 bg-white rounded-2xl shadow-soft border border-slate-50 transition-all duration-500 overflow-hidden">
                 
                 <!-- Selector de Dentición (Neo-Medical Style) -->
-                <div class="flex justify-center mb-8">
-                    <div class="bg-slate-100 p-1.5 rounded-2xl flex gap-1 shadow-inner border border-slate-200/50">
-                        <button onclick="window._odontInstance.setMode('adulto')" class="px-6 py-2 rounded-xl text-xs font-bold transition-all ${isAdult ? 'bg-white text-primary shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}">Adulto (32)</button>
-                        <button onclick="window._odontInstance.setMode('mixto')" class="px-6 py-2 rounded-xl text-xs font-bold transition-all ${isMixed ? 'bg-[#00BFA6] text-white shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}">Mixto (52)</button>
-                        <button onclick="window._odontInstance.setMode('niño')" class="px-6 py-2 rounded-xl text-xs font-bold transition-all ${isChild ? 'bg-primary text-white shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}">Niño (20)</button>
+                <div class="flex justify-center mb-4">
+                    <div class="bg-slate-100 p-1 rounded-xl flex gap-1 shadow-inner border border-slate-200/50">
+                        <button onclick="window._odontInstance.setMode('adulto')" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAdult ? 'bg-white text-primary shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}">Adulto (32)</button>
+                        <button onclick="window._odontInstance.setMode('mixto')" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isMixed ? 'bg-[#00BFA6] text-white shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}">Mixto (52)</button>
+                        <button onclick="window._odontInstance.setMode('niño')" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isChild ? 'bg-primary text-white shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}">Niño (20)</button>
                     </div>
                 </div>
 
@@ -94,9 +94,9 @@ export class Odontogram {
                 <div class="absolute top-[60%] left-0 right-0 h-[1px] bg-accent/20 -translate-y-1/2 z-0"></div>
                 <div class="absolute left-1/2 top-[30%] bottom-0 w-[1px] bg-accent/20 -translate-x-1/2 z-0"></div>
 
-                <div class="relative z-10 flex flex-col gap-6">
+                <div class="relative z-10 flex flex-col gap-4">
                     <!-- Upper Arch -->
-                    <div class="flex flex-col items-center gap-4 relative">
+                    <div class="flex flex-col items-center gap-3 relative">
                         <!-- Ortopedia Layer Upper -->
                         ${this.data.arcos.superior?.tipo?.toLowerCase() === 'ortopedia' ? `
                             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-32 bg-primary/5 rounded-[50%] blur-xl pointer-events-none z-0"></div>
@@ -285,39 +285,39 @@ export class Odontogram {
         const categoryFilter = isChild ? 'NIÑO' : 'ADULTO';
 
         container.innerHTML = `
-            <div class="p-8 border-b border-white/20 flex justify-between items-start bg-gradient-to-r from-blue-50/50 to-purple-50/50">
+            <div class="p-4 border-b border-white/20 flex justify-between items-start bg-gradient-to-r from-blue-50/50 to-purple-50/50">
                 <div>
-                    <h3 class="text-2xl font-display font-extrabold text-primary tracking-tight drop-shadow-sm">Diente ${id}</h3>
-                    <p class="text-[10px] font-bold text-primary/60 uppercase tracking-widest mt-1">Plan de Tratamiento (${categoryFilter})</p>
+                    <h3 class="text-lg font-display font-extrabold text-primary tracking-tight drop-shadow-sm">Diente ${id}</h3>
+                    <p class="text-[8px] font-bold text-primary/60 uppercase tracking-widest mt-0.5">Plan de Tratamiento (${categoryFilter})</p>
                 </div>
-                <button onclick="window._odontInstance.closeClinicalModal()" class="w-10 h-10 bg-white shadow-soft rounded-full flex items-center justify-center text-primary/60 hover:text-primary hover:scale-105 transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <button onclick="window._odontInstance.closeClinicalModal()" class="w-8 h-8 bg-white shadow-soft rounded-full flex items-center justify-center text-primary/60 hover:text-primary hover:scale-105 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
             </div>
 
-            <div class="p-8 space-y-8 flex-grow overflow-y-auto custom-scrollbar">
+            <div class="p-4 space-y-4 flex-grow overflow-y-auto custom-scrollbar">
                 
                 <!-- Estado Selector -->
-                <div class="flex gap-4">
-                    <button id="st-caries" onclick="window._odontInstance.setStatus('caries')" class="status-btn flex-1 p-4 rounded-2xl border-2 border-red-100 bg-white text-red-500 font-bold text-xs uppercase tracking-widest flex flex-col items-center gap-2 active ring-4 ring-red-50 hover:border-red-200 hover:bg-red-50/50 transition-all shadow-sm">
-                        <span class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span> Por Realizar
+                <div class="flex gap-2">
+                    <button id="st-caries" onclick="window._odontInstance.setStatus('caries')" class="status-btn flex-1 p-3 rounded-xl border-2 border-red-100 bg-white text-red-500 font-bold text-[9px] uppercase tracking-widest flex flex-col items-center gap-1.5 active ring-4 ring-red-50 hover:border-red-200 hover:bg-red-50/50 transition-all shadow-sm">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span> Por Realizar
                     </button>
-                    <button id="st-propuesto" onclick="window._odontInstance.setStatus('propuesto')" class="status-btn flex-1 p-4 rounded-2xl border-2 border-amber-100 bg-white text-amber-500 font-bold text-xs uppercase tracking-widest flex flex-col items-center gap-2 hover:border-amber-200 hover:bg-amber-50/50 transition-all shadow-sm">
-                        <span class="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span> Propuesto
+                    <button id="st-propuesto" onclick="window._odontInstance.setStatus('propuesto')" class="status-btn flex-1 p-3 rounded-xl border-2 border-amber-100 bg-white text-amber-500 font-bold text-[9px] uppercase tracking-widest flex flex-col items-center gap-1.5 hover:border-amber-200 hover:bg-amber-50/50 transition-all shadow-sm">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span> Propuesto
                     </button>
-                    <button id="st-realizado" onclick="window._odontInstance.setStatus('realizado')" class="status-btn flex-1 p-4 rounded-2xl border-2 border-blue-100 bg-white text-blue-500 font-bold text-xs uppercase tracking-widest flex flex-col items-center gap-2 hover:border-blue-100 hover:bg-blue-50/50 transition-all shadow-sm">
-                        <span class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span> Realizado (Existente)
+                    <button id="st-realizado" onclick="window._odontInstance.setStatus('realizado')" class="status-btn flex-1 p-3 rounded-xl border-2 border-blue-100 bg-white text-blue-500 font-bold text-[9px] uppercase tracking-widest flex flex-col items-center gap-1.5 hover:border-blue-100 hover:bg-blue-50/50 transition-all shadow-sm">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span> Realizado
                     </button>
                 </div>
 
                 <!-- GRUPO A: Operatorios -->
-                <div class="space-y-4">
-                    <h4 class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-                        <span class="w-1.5 h-4 bg-primary rounded-full"></span> Grupo A: Restauración x Caras
+                <div class="space-y-3">
+                    <h4 class="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-1 h-3 bg-primary rounded-full"></span> Restauración x Caras
                     </h4>
-                    <div id="faces-selector" class="grid grid-cols-5 gap-3">
+                    <div id="faces-selector" class="grid grid-cols-5 gap-2">
                         ${['V', 'L', 'M', 'D', 'O'].map(f => `
-                            <button onclick="window._odontInstance.toggleFace('${f}')" id="face-${f}" class="py-3 px-2 border-2 border-slate-100 bg-white rounded-xl text-[10px] font-bold text-slate-500 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-sm">
+                            <button onclick="window._odontInstance.toggleFace('${f}')" id="face-${f}" class="py-2 px-1 border-2 border-slate-100 bg-white rounded-lg text-[9px] font-bold text-slate-500 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-sm">
                                 ${f === 'V' ? 'Vest' : f === 'L' ? 'Ling' : f === 'M' ? 'Mes' : f === 'D' ? 'Dist' : 'Oclu'}
                             </button>
                         `).join('')}
@@ -339,7 +339,7 @@ export class Odontogram {
                 <!-- GRUPO B & C: Procedimientos -->
                 <div class="space-y-4">
                     <h4 class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-                        <span class="w-1.5 h-4 bg-primary/70 rounded-full"></span> Grupo B y C: Procedimientos Clínicos
+                        <span class="w-1 h-3 bg-primary/70 rounded-full"></span> Proc. Clínicos
                     </h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="procedimientos-list">
                         <!-- Loaded from catalog -->
@@ -347,9 +347,9 @@ export class Odontogram {
                 </div>
             </div>
 
-            <div class="p-6 bg-slate-50/80 border-t border-slate-100 flex gap-4 backdrop-blur-sm">
-                <button type="button" onclick="window._odontInstance.clearTooth('${id}')" class="sach-button variant-unset !h-14 !px-6 border-2 border-red-200 text-red-500 bg-white hover:bg-red-50 transition-colors rounded-xl shadow-sm font-bold text-sm">Limpiar Diente</button>
-                <button type="button" onclick="window._odontInstance.applyClinicalChanges()" class="sach-button variant-set bg-[#00BFA6] hover:bg-[#00a892] text-white !h-14 w-full shadow-[0_8px_20px_rgba(0,191,166,0.3)] transition-all rounded-xl font-bold text-sm">Finalizar Procedimiento</button>
+            <div class="p-4 bg-slate-50/80 border-t border-slate-100 flex gap-3 backdrop-blur-sm">
+                <button type="button" onclick="window._odontInstance.clearTooth('${id}')" class="sach-button variant-unset !h-10 !px-4 border-2 border-red-200 text-red-500 bg-white hover:bg-red-50 transition-colors rounded-lg shadow-sm font-bold text-xs">Limpiar</button>
+                <button type="button" onclick="window._odontInstance.applyClinicalChanges()" class="sach-button variant-set bg-[#00BFA6] hover:bg-[#00a892] text-white !h-10 w-full shadow-[0_4px_12px_rgba(0,191,166,0.3)] transition-all rounded-lg font-bold text-xs">Finalizar</button>
             </div>
         `;
 
@@ -382,14 +382,14 @@ export class Odontogram {
             else if (label.toLowerCase().includes('perno')) { group = 'B'; symbol = 'perno'; }
             else if (['parcial'].some(k => label.toLowerCase().includes(k))) { group = 'B'; symbol = 'parcial'; }
             else if (['total', 'completa'].some(k => label.toLowerCase().includes(k))) { group = 'B'; symbol = 'total'; }
-            else if (['protesis', 'puente'].some(k => label.toLowerCase().includes(k))) { group = 'B'; symbol = 'otros'; }
+            else if (['protesis', 'puente', 'carilla'].some(k => label.toLowerCase().includes(k))) { group = 'B'; symbol = 'otros'; }
 
             return `
                 <button onclick="window._odontInstance.selectProcedimiento('${t.id}', '${group}', '${symbol || ''}')" 
-                        class="proc-btn text-left p-4 rounded-xl border bg-white hover:border-accent transition-all group"
+                        class="proc-btn text-left p-2.5 rounded-lg border bg-white hover:border-accent transition-all group"
                         data-id="${t.id}">
-                    <p class="text-[11px] font-extrabold text-dark group-hover:text-accent leading-tight">${label}</p>
-                    <p class="text-[10px] font-bold text-slate-400 mt-1">$${parseFloat(t.VALOR).toFixed(2)}</p>
+                    <p class="text-[9px] font-extrabold text-dark group-hover:text-accent leading-tight">${label}</p>
+                    <p class="text-[8px] font-bold text-slate-400 mt-0.5">$${parseFloat(t.VALOR).toFixed(2)}</p>
                 </button>
             `;
         }).join('');
@@ -519,17 +519,26 @@ export class Odontogram {
             }
 
             // Detect Status Change to 'realizado' for Clinical History Logging
-            const oldStatus = this.data[id]?.status || 'caries';
+            const isTempTooth = id >= 51 && id <= 85;
+            const toothData = isTempTooth ? (this.data.temporales?.[id]) : (this.data.permanentes?.[id]);
+            const oldStatus = toothData?.status || 'caries';
             const newStatus = this._tempStatus;
             const procName = this._tempData.procedimiento?.TRATAMIENTO || this._tempData.procedimiento?.nombre || 'Procedimiento';
 
             if (oldStatus !== 'realizado' && newStatus === 'realizado') {
                 const history = this.patient['plan_tratamiento_json'] || [];
                 const dentLabel = this._tempData.symbol === 'total' ? 'TODA LA DENTADURA' : `el diente #${id}`;
+                
+                // Obtener el presupuesto activo para vincular la nota
+                let budgetData = this.patient.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+                const presupuestoActivo = budgetData.presupuestos?.find(bp => bp.id === budgetData.presupuesto_activo);
+                
                 history.unshift({
                     fecha: new Date().toISOString(),
                     doctor: 'Dra. Lucía Quintero', // Default context
-                    nota: `Tratamiento Finalizado: ${procName} en ${dentLabel}.`
+                    nota: `Tratamiento Finalizado: ${procName} en ${dentLabel}.`,
+                    presupuesto_id: presupuestoActivo ? presupuestoActivo.id : null,
+                    presupuesto_nombre: presupuestoActivo ? presupuestoActivo.nombre : null
                 });
 
                 // Persist History as well
@@ -575,13 +584,31 @@ export class Odontogram {
         const pId = this.patient?.id;
         if (!pId) return;
 
-        // OPTIMISTIC UI: Update the shared patient object in memory IMMEDIATELY
-        let b = this.patient.presupuesto_json || { items: [], abonos: [], total_abonado: 0 };
-        if (Array.isArray(b)) b = { items: b, abonos: [], total_abonado: 0 };
-        if (!b.items) b.items = [];
+        // MULTI-PRESUPUESTO: Obtener presupuesto activo
+        let budgetData = this.patient.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo) || budgetData.presupuestos[0];
+        
+        // Si no hay presupuesto activo, crear uno por defecto
+        if (!presupuestoActivo) {
+            const defaultBudget = {
+                id: 'presupuesto_1',
+                nombre: 'Plan de Tratamiento inicial',
+                fecha_creacion: new Date().toISOString(),
+                items: [],
+                abonos: []
+            };
+            budgetData.presupuestos.push(defaultBudget);
+            budgetData.presupuesto_activo = defaultBudget.id;
+        }
 
-        // 1. Filter items that DON'T come from the odontogram (manual/general items)
-        const generalItems = b.items.filter(item => item && !item.diente);
+        // Asegurar estructura del presupuesto activo
+        if (!presupuestoActivo.items) presupuestoActivo.items = [];
+        if (!presupuestoActivo.abonos) presupuestoActivo.abonos = [];
+
+        // 1. Filter manual items that should NOT be synced from odontogram
+        const manualItems = presupuestoActivo.items.filter(item => item && item.tipo === 'manual');
 
         // 2. Generate new items based on current odontogram state
         const odontItems = [];
@@ -597,7 +624,8 @@ export class Odontogram {
                         costo: parseFloat(arc.procedimiento.VALOR || arc.procedimiento.valor || 0),
                         diente: `Arco ${z.charAt(0).toUpperCase() + z.slice(1)}`,
                         estado: statusLabel,
-                        fecha: arc.fecha || new Date().toISOString()
+                        fecha: arc.fecha || new Date().toISOString(),
+                        tipo: 'odontograma'
                     });
                 }
             });
@@ -636,7 +664,8 @@ export class Odontogram {
                             costo: procCosto,
                             diente: toothId,
                             estado: statusLabel,
-                            fecha: new Date().toISOString()
+                            fecha: new Date().toISOString(),
+                            tipo: 'odontograma'
                         });
                     }
                 }
@@ -653,16 +682,17 @@ export class Odontogram {
                 costo: grp.costo, // Se cobra un solo costo independientemente de la cantidad
                 diente: grp.dientes.length > 28 ? 'Dentadura Completa' : grp.dientes.join(', '),
                 estado: grp.estado,
-                fecha: grp.fecha
+                fecha: grp.fecha,
+                tipo: 'odontograma'
             });
         }
 
-        // 3. Merge and Sync Memory
-        b.items = [...generalItems, ...odontItems];
-        this.patient.presupuesto_json = b;
+        // 3. Merge and Sync to Presupuesto Activo
+        presupuestoActivo.items = [...manualItems, ...odontItems];
+        this.patient.presupuesto_json = budgetData;
 
         // 4. PERSIST (Background)
-        supabase.from('PACIENTES').update({ presupuesto_json: b }).eq('id', pId).then(() => { });
+        supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId).then(() => { });
 
         // 5. BROADCAST: Trigger refresh of other clinical module tabs (Presupuesto/Historia)
         if (window.renderizarModuloClinico) {
@@ -671,24 +701,41 @@ export class Odontogram {
     }
 
     async addProcedimientoToBudget(proc) {
-        // This logic needs to communicate with patients_v2 to update the budget_json
-        // For simplicity, we can emit an event or let onUpdate handle it if we modify its signature
-        // But Dante wants integration, so let's call a global if defined or handle it here
         const pId = this.patient?.id;
         if (!pId) return;
 
-        const { data: p } = await supabase.from('PACIENTES').select('presupuesto_json').eq('id', pId).single();
-        let b = p.presupuesto_json || { items: [], abonos: [], total_abonado: 0 };
-        if (Array.isArray(b)) b = { items: b, abonos: [], total_abonado: 0 };
+        // MULTI-PRESUPUESTO: Obtener presupuesto activo
+        let budgetData = this.patient.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo) || budgetData.presupuestos[0];
+        
+        // Si no hay presupuesto activo, crear uno por defecto
+        if (!presupuestoActivo) {
+            const defaultBudget = {
+                id: 'presupuesto_1',
+                nombre: 'Plan de Tratamiento inicial',
+                fecha_creacion: new Date().toISOString(),
+                items: [],
+                abonos: []
+            };
+            budgetData.presupuestos.push(defaultBudget);
+            budgetData.presupuesto_activo = defaultBudget.id;
+            presupuestoActivo = defaultBudget;
+        }
 
-        b.items.push({
+        if (!presupuestoActivo.items) presupuestoActivo.items = [];
+        
+        presupuestoActivo.items.push({
             nombre: proc.TRATAMIENTO || proc.tratamiento,
             costo: parseFloat(proc.VALOR || proc.valor),
             diente: window._currentToothId,
-            fecha: new Date().toISOString()
+            fecha: new Date().toISOString(),
+            tipo: 'odontograma'
         });
 
-        await supabase.from('PACIENTES').update({ presupuesto_json: b }).eq('id', pId);
+        this.patient.presupuesto_json = budgetData;
+        await supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId);
     }
 
     closeClinicalModal() {

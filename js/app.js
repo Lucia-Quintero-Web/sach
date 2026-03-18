@@ -205,7 +205,7 @@ async function showLoginOverlay() {
     // UI Inicial de carga
     overlay.innerHTML = `
         <div class="text-center animate-pulse">
-            <img src="./jvcreative.png" class="h-14 mx-auto mb-6 brightness-0 invert opacity-50">
+            <img src="./img/jvcreative.png" class="h-14 mx-auto mb-6 brightness-0 invert opacity-50">
             <p class="text-white/40 text-[10px] font-bold uppercase tracking-[0.4em]">Iniciando Protocolo Neo-Medical...</p>
         </div>`;
     document.body.innerHTML = '';
@@ -223,7 +223,7 @@ async function showLoginOverlay() {
     overlay.innerHTML = `
         <div class="relative w-full max-w-lg animate-in fade-in zoom-in-95 duration-700">
             <div class="text-center mb-10">
-                <img src="./jvcreative.png" class="h-12 mx-auto mb-6 brightness-0 invert opacity-90 transition-all hover:scale-105">
+                <img src="./img/jvcreative.png" class="h-12 mx-auto mb-6 brightness-0 invert opacity-90 transition-all hover:scale-105">
                 <h1 class="text-white font-display font-extrabold text-2xl tracking-tight mb-2">S.A.C.H <span class="text-accent underline decoration-primary/30 decoration-4 underline-offset-8">Neo-Medical</span></h1>
                 <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.4em]">Sistema de Administración Clínica Híbrida</p>
             </div>

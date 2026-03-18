@@ -117,7 +117,7 @@ Estimado/a *${nombre}*, es un placer saludarte.
 
 Te confirmamos que tu expediente clínico ha sido creado exitosamente en nuestra plataforma de salud. Tu ficha de registro fue procesada y ya formas parte de nuestra familia dental.
 
-*Nota:* Recuerda que puedes interactuar por este medio para agendar citas laborales o consultar planes de tratamiento.
+*Nota:* Recuerda que puedes interactuar por este medio para agendar citas odontológicas o consultar planes de tratamiento.
 
 Tu bienestar es nuestra prioridad. 🌿`;
 }

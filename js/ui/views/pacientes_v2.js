@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Pacientes Module
  * Neo-Medical Style Implementation
  */
@@ -7,6 +7,9 @@ import { supabase } from '../../data/supabase-client.js';
 import { sanitizarCelularEcuador, generarMensajeBienvenidaPremium } from '../components/recordatorios.js';
 
 let currentPatients = [];
+let currentFilter = 'all';
+let currentPage = 1;
+const PATIENTS_PER_PAGE = 15;
 
 export async function renderPacientesView(container) {
     if (!window._pacientesSubscription) {
@@ -23,47 +26,66 @@ export async function renderPacientesView(container) {
     }
 
     container.innerHTML = `
-        <div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">Gestión de Pacientes</h2>
+                    <h2 class="text-2xl md:text-3xl font-display font-extrabold text-dark tracking-tight">Gestión de Pacientes</h2>
                     <p class="text-secondary text-sm font-medium mt-1">Directorio médico centralizado</p>
                 </div>
                 <button id="btn-nuevo-paciente" onclick="window.openNewPatientModal()" class="sach-button variant-set bg-accent shadow-glow flex items-center gap-2 group">
                     <div class="w-5 h-5 bg-white/20 rounded-lg flex items-center justify-center group-hover:rotate-90 transition-transform">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="3" stroke-linecap="round"/></svg>
                     </div>
-                    Registrar Paciente
+                    Registrar
                 </button>
             </div>
 
-            <!-- Search Bar -->
-            <div class="bg-white p-5 rounded-card shadow-soft border-0 flex items-center gap-4 transition-all focus-within:ring-4 focus-within:ring-primary/5">
-                <div class="relative flex-grow">
-                    <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-slate-300">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
-                    </span>
-                    <input type="text" id="patient-search" placeholder="Buscar por nombre, cédula o diagnóstico..." class="sach-input !bg-slate-50 border-none !pl-14 focus:!bg-white focus:!ring-0">
+            <!-- Filtros rápidos y Search -->
+            <div class="flex flex-col lg:flex-row gap-4">
+                <!-- Filtros -->
+                <div class="flex bg-white rounded-xl shadow-soft p-1 gap-1 overflow-x-auto">
+                    <button onclick="window.setPatientFilter('all')" class="filter-btn px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap" data-filter="all">Todos</button>
+                    <button onclick="window.setPatientFilter('child')" class="filter-btn px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap" data-filter="child">Niños</button>
+                    <button onclick="window.setPatientFilter('adult')" class="filter-btn px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap" data-filter="adult">Adultos</button>
+                    <button onclick="window.setPatientFilter('new')" class="filter-btn px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap" data-filter="new">Nuevos</button>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="bg-white p-4 rounded-xl shadow-soft flex items-center gap-3 flex-grow">
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
+                        </span>
+                        <input type="text" id="patient-search" placeholder="Buscar por nombre o cédula..." class="sach-input !bg-slate-50 border-none !pl-12 !h-10 text-sm focus:!bg-white focus:!ring-0">
+                    </div>
+                    <span id="patient-count" class="text-xs font-bold text-slate-400 whitespace-nowrap bg-slate-50 px-3 py-1.5 rounded-lg">0 pacientes</span>
                 </div>
             </div>
 
             <!-- Patient List Table -->
-            <div class="bg-white rounded-card shadow-soft border-0 overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-soft border border-slate-100 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
-                            <tr class="bg-slate-50/50">
-                                <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identificación & Nombre</th>
-                                <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Edad</th>
-                                <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contacto Directo</th>
-                                <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado Clínico</th>
-                                <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                            <tr class="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                                <th class="px-4 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Paciente</th>
+                                <th class="px-4 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Edad</th>
+                                <th class="px-4 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Contacto</th>
+                                <th class="px-4 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Estado</th>
+                                <th class="px-4 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="patients-list-body" class="divide-y divide-slate-50">
                             <!-- Populated by JS -->
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Paginación -->
+                <div id="patients-pagination" class="px-4 py-3 bg-slate-50 flex items-center justify-between border-t border-slate-100">
+                    <button id="prev-page" onclick="window.changePage(-1)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white shadow-sm text-slate-500 hover:text-primary disabled:opacity-50" disabled>Anterior</button>
+                    <span id="page-info" class="text-xs font-bold text-slate-400">Página 1</span>
+                    <button id="next-page" onclick="window.changePage(1)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white shadow-sm text-slate-500 hover:text-primary disabled:opacity-50" disabled>Siguiente</button>
                 </div>
             </div>
         </div>
@@ -77,83 +99,140 @@ export async function renderPacientesView(container) {
     `;
 
     loadPatients();
+    
+    window.setPatientFilter = (filter) => {
+        currentFilter = filter;
+        currentPage = 1;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('bg-primary', 'text-white');
+            btn.classList.add('text-slate-500', 'hover:bg-slate-100');
+        });
+        document.querySelector(`[data-filter="${filter}"]`).classList.add('bg-primary', 'text-white');
+        document.querySelector(`[data-filter="${filter}"]`).classList.remove('text-slate-500', 'hover:bg-slate-100');
+        loadPatients(document.getElementById('patient-search')?.value || '');
+    };
+    
+    window.changePage = (delta) => {
+        currentPage += delta;
+        loadPatients(document.getElementById('patient-search')?.value || '');
+    };
+    
+    document.querySelector('[data-filter="all"]').classList.add('bg-primary', 'text-white');
+    document.querySelector('[data-filter="all"]').classList.remove('text-slate-500', 'hover:bg-slate-100');
 }
 
 async function loadPatients(query = '') {
     const listBody = document.getElementById('patients-list-body');
+    if (!listBody) return;
+    
+    listBody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center"><span class="text-slate-400 font-medium animate-pulse">Cargando pacientes...</span></td></tr>`;
 
-    if (!currentPatients.length || query === '') {
+    if (!currentPatients.length) {
         const { data, error } = await supabase.from('PACIENTES').select('*').order('created_at', { ascending: false });
-        if (!error && data) currentPatients = data;
+        if (error) {
+            listBody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-red-400 font-medium">Error: ${error.message}</td></tr>`;
+            return;
+        }
+        currentPatients = data || [];
     }
 
-    const filtered = currentPatients.filter(p =>
+    let filtered = currentPatients.filter(p =>
         p['NOMBRE DEL PACIENTE']?.toLowerCase().includes(query.toLowerCase()) ||
         p['ID DEL PACIENTE']?.toString().includes(query)
     );
 
-    if (filtered.length === 0) {
-        listBody.innerHTML = `<tr><td colspan="5" class="px-8 py-20 text-center text-slate-400 font-medium font-bold">No se encontraron pacientes registrados con el criterio "${query}".</td></tr>`;
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    filtered = filtered.filter(p => {
+        const edad = parseInt(p['EDAD']) || 0;
+        const created = new Date(p.created_at);
+        
+        if (currentFilter === 'child') return edad > 0 && edad < 18;
+        if (currentFilter === 'adult') return edad >= 18;
+        if (currentFilter === 'new') return created >= thirtyDaysAgo;
+        return true;
+    });
+
+    const countEl = document.getElementById('patient-count');
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const pageInfo = document.getElementById('page-info');
+
+    const totalPages = Math.ceil(filtered.length / PATIENTS_PER_PAGE);
+    if (currentPage > totalPages && totalPages > 0) currentPage = 1;
+    const start = (currentPage - 1) * PATIENTS_PER_PAGE;
+    const paginated = filtered.slice(start, start + PATIENTS_PER_PAGE);
+
+    if (countEl) countEl.textContent = `${filtered.length} pacientes`;
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentPage <= 1;
+        prevBtn.onclick = () => window.changePage(-1);
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentPage >= totalPages;
+        nextBtn.onclick = () => window.changePage(1);
+    }
+    if (pageInfo) pageInfo.textContent = `Página ${currentPage} de ${totalPages || 1}`;
+
+    if (paginated.length === 0) {
+        listBody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-slate-400 font-medium">No se encontraron pacientes.</td></tr>`;
         return;
     }
 
-    listBody.innerHTML = filtered.map(p => {
+    const rows = await Promise.all(paginated.map(async p => {
         const edad = parseInt(p['EDAD']) || 0;
-        // NIÑOS < 18 años: fondo lila atenuado | ADULTOS >= 18: fondo azul atenuado
-        const rowClass = 'transition-colors group';
-
-        let bgStyle = '';
-        if (edad > 0 && edad < 18) {
-            bgStyle = 'background-color: rgba(180, 130, 210, 0.18);'; // lila/lavanda visible
-        } else if (edad >= 18) {
-            bgStyle = 'background-color: rgba(30, 120, 220, 0.07);'; // azul celeste visible
-        }
+        const isChild = edad > 0 && edad < 18;
+        const isAdult = edad >= 18;
+        
+        const bgClass = isChild ? 'bg-purple-50/50 hover:bg-purple-50' : isAdult ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-slate-50';
+        const badgeClass = isChild ? 'bg-purple-100 text-purple-700' : isAdult ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600';
+        const label = isChild ? 'Niño' : isAdult ? 'Adulto' : 'Sin edad';
 
         return `
-        <tr class="${rowClass}" style="${bgStyle}">
-            <td class="px-6 py-3">
+        <tr class="${bgClass} transition-colors border-l-2 ${isChild ? 'border-purple-300' : isAdult ? 'border-blue-300' : 'border-slate-200'}">
+            <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-[10px] bg-primary/5 text-primary flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    <div class="w-8 h-8 rounded-lg ${isChild ? 'bg-purple-100 text-purple-600' : 'bg-primary/10 text-primary'} flex items-center justify-center text-xs font-bold flex-shrink-0">
                         ${p['NOMBRE DEL PACIENTE']?.charAt(0) || '?'}
                     </div>
                     <div>
-                        <div class="font-bold text-dark text-sm leading-tight">${p['NOMBRE DEL PACIENTE']}</div>
-                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Cédula: ${p['ID DEL PACIENTE']}</div>
+                        <div class="font-bold text-dark text-sm">${p['NOMBRE DEL PACIENTE']}</div>
+                        <div class="text-[9px] font-medium text-slate-400">${p['ID DEL PACIENTE']}</div>
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-3">
-                <span class="text-sm font-bold text-slate-600">${p['EDAD'] || '-'} años</span>
+            <td class="px-4 py-3">
+                <span class="text-sm font-semibold ${isChild ? 'text-purple-600' : 'text-slate-600'}">${p['EDAD'] || '-'} <span class="text-xs font-normal">años</span></span>
             </td>
-            <td class="px-6 py-3">
-                <div class="text-sm font-semibold text-slate-600">${p['CELULAR DEL PACIENTE'] || '-'}</div>
-                <div class="text-[11px] font-medium text-slate-400">${p['CORREO'] || 'Sin correo registrado'}</div>
+            <td class="px-4 py-3">
+                <div class="text-sm font-medium text-slate-600">${p['CELULAR DEL PACIENTE'] || '-'}</div>
+                <div class="text-[10px] text-slate-400">${p['CORREO'] || 'Sin correo'}</div>
             </td>
-            <td class="px-6 py-3">
-                 <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_rgba(0,191,166,0.3)]"></span>
-                    <span class="text-[10px] font-bold text-accent uppercase tracking-widest">En Tratamiento</span>
-                 </div>
+            <td class="px-4 py-3">
+                <span class="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wide ${badgeClass}">${label}</span>
             </td>
-            <td class="px-6 py-3 text-right">
+            <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-2">
-                    <button onclick="window.openAptFromPatient('${p.id}')" class="sach-button variant-set bg-primary !h-9 !px-3 text-[10px] font-bold shadow-soft">
-                        🗓 Agendar
+                    <button onclick="window.openAptFromPatient('${p.id}')" class="sach-button variant-set bg-primary !h-8 !px-3 text-[9px] font-bold shadow-sm">
+                        Agendar
                     </button>
-                    <button onclick="window.viewPatientDetail('${p.id}')" class="sach-button variant-unset !h-9 !px-3 text-[10px] font-bold hover:!text-primary hover:!bg-primary/10">
+                    <button onclick="window.viewPatientDetail('${p.id}')" class="sach-button variant-unset !h-8 !px-3 text-[9px] font-bold hover:!text-primary">
                         Expediente
                     </button>
                     ${p['CELULAR DEL PACIENTE'] ? `
-                    <button onclick="window.open('https://wa.me/${sanitizarCelularEcuador(p['CELULAR DEL PACIENTE'])}', '_blank')" class="sach-button !h-9 !px-2.5 bg-[#25D366] hover:bg-[#1DA851] flex items-center justify-center text-white shadow-soft transition-colors" title="WhatsApp Directo">
-                        <svg class="w-4 h-4" viewBox="0 0 737.509 740.824">
+                    <button onclick="window.open('https://wa.me/${sanitizarCelularEcuador(p['CELULAR DEL PACIENTE'])}', '_blank')" class="sach-button !h-8 !px-2 bg-[#25D366] hover:bg-[#1DA851] flex items-center justify-center text-white shadow-sm" title="WhatsApp">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 737.509 740.824">
                             <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M630.056 107.658C560.727 38.271 468.525.039 370.294 0 167.891 0 3.16 164.668 3.079 367.072c-.027 64.699 16.883 127.855 49.016 183.523L0 740.824l194.666-51.047c53.634 29.244 114.022 44.656 175.481 44.682h.151c202.382 0 367.128-164.689 367.21-367.094.039-98.088-38.121-190.32-107.452-259.707m-259.758 564.8h-.125c-54.766-.021-108.483-14.729-155.343-42.529l-11.146-6.613-115.516 30.293 30.834-112.592-7.258-11.543c-30.552-48.58-46.689-104.729-46.665-162.379C65.146 198.865 202.065 62 370.419 62c81.521.031 158.154 31.81 215.779 89.482s89.342 134.332 89.311 215.859c-.07 168.242-136.987 305.117-305.211 305.117m167.415-228.514c-9.176-4.591-54.286-26.782-62.697-29.843-8.41-3.061-14.526-4.591-20.644 4.592-6.116 9.182-23.7 29.843-29.054 35.964-5.351 6.122-10.703 6.888-19.879 2.296-9.175-4.591-38.739-14.276-73.786-45.526-27.275-24.32-45.691-54.36-51.043-63.542-5.352-9.183-.569-14.148 4.024-18.72 4.127-4.11 9.175-10.713 13.763-16.07 4.587-5.356 6.116-9.182 9.174-15.303 3.059-6.122 1.53-11.479-.764-16.07-2.294-4.591-20.643-49.739-28.29-68.104-7.447-17.886-15.012-15.466-20.644-15.746-5.346-.266-11.469-.323-17.585-.323-6.117 0-16.057 2.296-24.468 11.478-8.41 9.183-32.112 31.374-32.112 76.521s32.877 88.763 37.465 94.885c4.587 6.122 64.699 98.771 156.741 138.502 21.891 9.45 38.982 15.093 52.307 19.323 21.981 6.979 41.983 5.994 57.793 3.633 17.628-2.633 54.285-22.19 61.932-43.616 7.646-21.426 7.646-39.791 5.352-43.617-2.293-3.826-8.41-6.122-17.585-10.714"/>
                         </svg>
-                    </button>
-                    ` : ''}
+                    </button>` : ''}
                 </div>
             </td>
-        </tr>
-    `}).join('');
+        </tr>`;
+    }));
+    
+    listBody.innerHTML = rows.join('');
 }
 
 window.viewPatientDetail = async (id) => {
@@ -177,36 +256,36 @@ window.viewPatientDetail = async (id) => {
     const currentOdont = p['odontograma_json'] || {};
 
     content.innerHTML = `
-        <div class="flex justify-between items-start mb-8 border-b border-black/5 pb-6">
-            <div class="flex items-center gap-5">
-                <div class="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center text-xl font-display font-bold shadow-soft">
+        <div class="flex justify-between items-start mb-5 border-b border-black/5 pb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center text-lg font-display font-bold shadow-soft">
                     ${nombre.charAt(0)}
                 </div>
                 <div>
-                    <h3 class="text-2xl font-display font-extrabold text-dark tracking-tight leading-tight">${nombre}</h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                        ID: ${p['ID DEL PACIENTE'] || '-'} <span class="mx-2">|</span> 
-                        ${p['EDAD'] || '?'} Años <span class="mx-2">|</span> 
+                    <h3 class="text-xl font-display font-extrabold text-dark tracking-tight leading-tight">${nombre}</h3>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        ID: ${p['ID DEL PACIENTE'] || '-'} <span class="mx-1">|</span> 
+                        ${p['EDAD'] || '?'} Años <span class="mx-1">|</span> 
                         ${p['SEXO'] || ''}
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
                  ${celular ? `
-                    <a href="https://wa.me/${celularLimpio}" target="_blank" class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-200 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke-width="2"/></svg>
+                    <a href="https://wa.me/${celularLimpio}" target="_blank" class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center hover:bg-emerald-200 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke-width="2"/></svg>
                     </a>` : ''}
-                <button onclick="window.closePatientModal()" class="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
+                <button onclick="window.closePatientModal()" class="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
                 </button>
             </div>
         </div>
 
-        <div class="flex items-center justify-between border-b border-black/5 mb-8">
-            <div class="flex items-center gap-4">
-                <button onclick="window.switchPatientTab('odontograma')" class="tab-btn active px-6 py-4 text-xs font-bold uppercase tracking-widest text-primary border-b-2 border-primary transition-all">Odontograma</button>
-                <button onclick="window.switchPatientTab('presupuesto')" class="tab-btn px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-primary transition-all">Presupuesto</button>
-                <button onclick="window.switchPatientTab('historia')" class="tab-btn px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-primary transition-all">Historia Clínica</button>
+        <div class="flex items-center justify-between border-b border-black/5 mb-5">
+            <div class="flex items-center gap-2">
+                <button onclick="window.switchPatientTab('odontograma')" class="tab-btn active px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b-2 border-primary transition-all">Odontograma</button>
+                <button onclick="window.switchPatientTab('presupuesto')" class="tab-btn px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-primary transition-all">Presupuesto</button>
+                <button onclick="window.switchPatientTab('historia')" class="tab-btn px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-primary transition-all">Historia</button>
             </div>
             <div class="flex items-center gap-2">
                 <button onclick="window.printClinicalRecord('${p.id}')" class="flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
@@ -217,17 +296,17 @@ window.viewPatientDetail = async (id) => {
         </div>
 
         <!-- Tabs Content -->
-        <div id="patient-tabs-root" class="min-h-[400px] max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+        <div id="patient-tabs-root" class="min-h-[300px] max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
             <!-- Content loaded dynamically -->
         </div>
 
         <!-- Footer Actions -->
-        <div class="flex gap-4 pt-10 border-t border-black/5 mt-10">
-            <button onclick="window.openNewPatientModal('${p.id}')" class="sach-button variant-set bg-primary w-full !h-12 shadow-soft">Editar Datos</button>
+        <div class="flex gap-3 pt-6 border-t border-black/5 mt-6">
+            <button onclick="window.openNewPatientModal('${p.id}')" class="sach-button variant-set bg-primary w-full !h-10 shadow-soft">Editar Datos</button>
             ${window.checkAdminAccess() ? `
-                <button onclick="window.eliminarPaciente('${p.id}')" class="sach-button variant-unset w-full !h-12 border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all">Eliminar Expediente</button>
+                <button onclick="window.eliminarPaciente('${p.id}')" class="sach-button variant-unset w-full !h-10 border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all">Eliminar</button>
             ` : ''}
-            <button onclick="window.closePatientModal()" class="sach-button variant-unset w-full !h-12 border-none bg-slate-50 text-slate-500">Cerrar Expediente</button>
+            <button onclick="window.closePatientModal()" class="sach-button variant-unset w-full !h-10 border-none bg-slate-50 text-slate-500">Cerrar</button>
         </div>
     `;
 
@@ -250,11 +329,48 @@ window.viewPatientDetail = async (id) => {
         const root = document.getElementById('patient-tabs-root');
         if (!root) return;
 
-        // Garantizar que presupuesto_json sea un objeto con la estructura correcta
-        let budgetData = p['presupuesto_json'] || { items: [], abonos: [] };
-        if (Array.isArray(budgetData)) budgetData = { items: budgetData, abonos: [] };
-        if (!budgetData.items) budgetData.items = [];
-        if (!budgetData.abonos) budgetData.abonos = [];
+        // Garantizar que presupuesto_json sea un objeto con la estructura correcta (MULTI-PRESUPUESTO)
+        let budgetData = p['presupuesto_json'];
+        
+        // Compatible con formato antiguo: { items: [], abonos: [] }
+        if (!budgetData || typeof budgetData !== 'object') {
+            budgetData = { presupuestos: [], presupuesto_activo: null };
+        }
+        
+        // Si tiene formato antiguo (items y abonos sueltos), migrar a nuevo formato
+        if (budgetData.items && !budgetData.presupuestos) {
+            const presupuesto1 = {
+                id: 'presupuesto_1',
+                nombre: 'Plan de Tratamiento inicial',
+                fecha_creacion: new Date().toISOString(),
+                items: budgetData.items || [],
+                abonos: budgetData.abonos || []
+            };
+            budgetData = {
+                presupuestos: [presupuesto1],
+                presupuesto_activo: 'presupuesto_1'
+            };
+        }
+        
+        // Si no hay presupuestos, crear el primero
+        if (!budgetData.presupuestos || budgetData.presupuestos.length === 0) {
+            const presupuesto1 = {
+                id: 'presupuesto_1',
+                nombre: 'Plan de Tratamiento inicial',
+                fecha_creacion: new Date().toISOString(),
+                items: [],
+                abonos: []
+            };
+            budgetData = {
+                presupuestos: [presupuesto1],
+                presupuesto_activo: 'presupuesto_1'
+            };
+        }
+        
+        // Asegurar que presupuesto_activo existe
+        if (!budgetData.presupuesto_activo && budgetData.presupuestos.length > 0) {
+            budgetData.presupuesto_activo = budgetData.presupuestos[0].id;
+        }
 
         const odontData = p['odontograma_json'] || {};
         const historyData = p['plan_tratamiento_json'] || [];
@@ -263,7 +379,7 @@ window.viewPatientDetail = async (id) => {
             root.innerHTML = `
                 <div id="odont-clinical-root"></div>
                 <!-- Módulo de Archivo Visual (Rx/Panorámicas) -->
-                <div id="visual-archive-root" class="mt-8 pt-8 border-t border-black/5"></div>
+                <div id="visual-archive-root" class="mt-4 pt-4 border-t border-black/5"></div>
             `;
             const odont = new Odontogram('odont-clinical-root', odontData, async (data) => {
                 p.odontograma_json = data;
@@ -304,11 +420,18 @@ function calcularTotalesPresupuesto(budgetObj) {
     return { totalTratamiento, totalAbonado, saldoPendiente };
 }
 
-async function renderBudgetTab(root, p, budgetObj) {
-    let { data: rawCatalog } = await supabase.from('TRATAMIENTOS').select('*');
+async function renderBudgetTab(root, p, budgetData) {
+    // Obtener presupuesto activo
+    const presupuestoActivo = budgetData.presupuestos?.find(bp => bp.id === budgetData.presupuesto_activo) || budgetData.presupuestos?.[0];
+    
+    const items = presupuestoActivo?.items || [];
+    const abonos = presupuestoActivo?.abonos || [];
 
-    const items = budgetObj.items || [];
-    const abonos = budgetObj.abonos || [];
+    // Guardar referencia global para funciones auxiliares
+    window._currentBudgetData = budgetData;
+    window._currentPresupuestoId = presupuestoActivo?.id;
+    
+    let { data: rawCatalog } = await supabase.from('TRATAMIENTOS').select('*');
 
     let catalog = (rawCatalog || []).map(item => ({
         nombre: item.TRATAMIENTO || item.tratamiento || item.nombre || 'Sin Nombre',
@@ -328,44 +451,79 @@ async function renderBudgetTab(root, p, budgetObj) {
     const categoriaFiltro = (parseInt(p['EDAD']) < 17) ? 'NIÑO' : 'ADULTO';
     const filteredCatalog = catalog.filter(c => c.categoria === categoriaFiltro || c.categoria === 'AMBOS');
 
-    const { totalTratamiento, totalAbonado, saldoPendiente } = calcularTotalesPresupuesto(budgetObj);
+    const { totalTratamiento, totalAbonado, saldoPendiente } = calcularTotalesPresupuesto(presupuestoActivo || {});
+
+    // Generar opciones del selector de presupuestos
+    const presupuestoOptions = (budgetData.presupuestos || []).map((bp, idx) => {
+        const fechaFormateada = bp.fecha_creacion ? new Date(bp.fecha_creacion).toLocaleDateString('es-EC') : 'Sin fecha';
+        const nombreMostrar = bp.nombre || `Presupuesto ${idx + 1}`;
+        const isActive = bp.id === budgetData.presupuesto_activo;
+        return `<option value="${bp.id}" ${isActive ? 'selected' : ''}>${nombreMostrar} - ${fechaFormateada}</option>`;
+    }).join('');
 
     root.innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
+        <!-- Selector de Presupuestos -->
+        <div class="bg-white rounded-card border border-black/5 p-3 mb-4">
+            <div class="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+                <div class="flex items-center gap-3 flex-grow">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2"/></svg>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Plan:</span>
+                    </div>
+                    <select id="presupuesto-selector" onchange="window.cambiarPresupuesto('${p.id}', this.value)" class="sach-input bg-slate-50 border-none font-bold text-xs max-w-xs">
+                        ${presupuestoOptions}
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.crearNuevoPresupuesto('${p.id}')" class="px-3 py-1.5 bg-accent text-white rounded-lg text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1.5 hover:bg-accent/90 transition-all shadow-soft">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"/></svg>
+                        Nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2 space-y-4">
                 <!-- Resumen Financiero -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-slate-50 p-5 rounded-xl border border-black/5">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Tratamiento</p>
-                        <p class="text-xl font-display font-bold text-primary" id="total-presupuesto-val">$${totalTratamiento.toFixed(2)}</p>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-black/5">
+                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total</p>
+                        <p class="text-lg font-display font-bold text-primary" id="total-presupuesto-val">$${totalTratamiento.toFixed(2)}</p>
                     </div>
-                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100">
-                        <p class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Total Abonado</p>
-                        <p class="text-xl font-display font-bold text-emerald-600" id="total-abonado-val">$${totalAbonado.toFixed(2)}</p>
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                        <p class="text-[8px] font-bold text-emerald-400 uppercase tracking-widest mb-0.5">Abonado</p>
+                        <p class="text-lg font-display font-bold text-emerald-600" id="total-abonado-val">$${totalAbonado.toFixed(2)}</p>
                     </div>
-                    <div class="bg-orange-50 p-5 rounded-xl border border-orange-100">
-                        <p class="text-[9px] font-bold text-orange-400 uppercase tracking-widest mb-1">Saldo Pendiente</p>
-                        <p class="text-xl font-display font-bold text-orange-600" id="saldo-pendiente-val">$${saldoPendiente.toFixed(2)}</p>
+                    <div class="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                        <p class="text-[8px] font-bold text-orange-400 uppercase tracking-widest mb-0.5">Pendiente</p>
+                        <p class="text-lg font-display font-bold text-orange-600" id="saldo-pendiente-val">$${saldoPendiente.toFixed(2)}</p>
                     </div>
                 </div>
                 
                 <div class="bg-white rounded-card border border-black/5 overflow-hidden">
-                    <div class="px-6 py-4 bg-slate-50/50 border-b border-black/5 flex justify-between items-center">
-                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Procedimientos Seleccionados</h4>
-                        <button onclick="window.saveCurrentBudget('${p.id}')" id="btn-save-budget" class="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-2 hover:bg-primary/90 transition-all shadow-soft group">
-                            <span class="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round"/></svg>
-                            </span>
-                            Guardar Presupuesto
-                        </button>
+                    <div class="px-4 py-3 bg-slate-50/50 border-b border-black/5 flex justify-between items-center gap-3 flex-wrap">
+                        <h4 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Procedimientos</h4>
+                        <div class="flex gap-2">
+                            <button onclick="window.mostrarCatalogoServicios('${p.id}')" id="btn-add-manual" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1.5 hover:bg-amber-200 transition-all shadow-soft">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"/></svg>
+                                Añadir
+                            </button>
+                            <button onclick="window.saveCurrentBudget('${p.id}')" id="btn-save-budget" class="px-3 py-1.5 bg-primary text-white rounded-lg text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1.5 hover:bg-primary/90 transition-all shadow-soft group">
+                                <span class="w-5 h-5 bg-white/20 rounded flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round"/></svg>
+                                </span>
+                                Guardar
+                            </button>
+                        </div>
                     </div>
                     <table class="w-full text-left">
                         <thead class="bg-slate-50/50">
                             <tr>
-                                <th class="px-6 py-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Diente</th>
-                                <th class="px-6 py-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Procedimiento</th>
-                                <th class="px-6 py-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Costo</th>
-                                <th class="px-6 py-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Eliminar</th>
+                                <th class="px-4 py-2.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Diente</th>
+                                <th class="px-4 py-2.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Procedimiento</th>
+                                <th class="px-4 py-2.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest text-right">Costo</th>
+                                <th class="px-4 py-2.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest text-right"></th>
                             </tr>
                         </thead>
                         <tbody id="budget-body" class="divide-y divide-slate-50">
@@ -401,39 +559,38 @@ async function renderBudgetTab(root, p, budgetObj) {
 
                 <!-- Sección de Abonos / Historial de Pagos -->
                 <div class="bg-white rounded-card border border-black/5 overflow-hidden">
-                    <div class="px-6 py-4 bg-slate-50/50 border-b border-black/5 flex justify-between items-center">
+                    <div class="px-4 py-3 bg-slate-50/50 border-b border-black/5 flex justify-between items-center">
                         <div class="flex items-center gap-2">
-                             <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Historial de Pagos / Abonos</h4>
+                             <h4 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Pagos</h4>
                         </div>
-                        <button onclick="window.promptAddAbono('${p.id}')" class="px-4 py-2 bg-[#40E0D0]/20 text-[#008080] rounded-xl text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-2 hover:bg-[#40E0D0]/40 transition-all group shadow-sm border border-[#40E0D0]/30 border-dashed">
-                            <span class="w-6 h-6 bg-white rounded-lg flex items-center justify-center shadow-soft group-hover:scale-110 transition-transform">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" stroke-width="3" stroke-linecap="round"/></svg>
+                        <button onclick="window.promptAddAbono('${p.id}')" class="px-3 py-1.5 bg-[#40E0D0]/20 text-[#008080] rounded-lg text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1.5 hover:bg-[#40E0D0]/40 transition-all group shadow-sm border border-[#40E0D0]/30 border-dashed">
+                            <span class="w-5 h-5 bg-white rounded flex items-center justify-center shadow-soft group-hover:scale-110 transition-transform">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" stroke-width="3" stroke-linecap="round"/></svg>
                             </span>
-                            Registrar Abono
+                            Abonar
                         </button>
                     </div>
                     <div class="p-0">
                         ${abonos.length === 0 ? `
-                            <div class="px-6 py-8 text-center text-slate-300 font-bold text-[10px] uppercase tracking-widest">No hay pagos registrados</div>
+                            <div class="px-4 py-6 text-center text-slate-300 font-bold text-[9px] uppercase tracking-widest">Sin pagos registrados</div>
                         ` : `
                             <table class="w-full text-left">
                                 <thead class="bg-slate-50/30">
                                     <tr>
-                                        <th class="px-6 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Fecha</th>
-                                        <th class="px-6 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Método</th>
-                                        <th class="px-6 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Monto</th>
-                                        <th class="px-6 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Acción</th>
+                                        <th class="px-4 py-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Fecha</th>
+                                        <th class="px-4 py-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Método</th>
+                                        <th class="px-4 py-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest text-right">Monto</th>
+                                        <th class="px-4 py-2 text-[8px] font-bold text-slate-400 uppercase tracking-widest text-right"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50">
                                     ${abonos.map((a, idx) => `
                                         <tr>
-                                            <td class="px-6 py-3">
-                                                <p class="text-[11px] font-bold text-dark leading-tight">${new Date(a.fecha).toLocaleDateString()}</p>
-                                                <p class="text-[9px] text-slate-400 font-medium">${new Date(a.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                            <td class="px-4 py-2">
+                                                <p class="text-[10px] font-bold text-dark leading-tight">${new Date(a.fecha).toLocaleDateString()}</p>
                                             </td>
-                                            <td class="px-6 py-3">
-                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-bold uppercase">${a.metodo || 'Efectivo'}</span>
+                                            <td class="px-4 py-2">
+                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-bold uppercase">${a.metodo || 'Efectivo'}</span>
                                             </td>
                                             <td class="px-6 py-3 text-sm font-bold text-emerald-600 text-right">$${parseFloat(a.monto).toFixed(2)}</td>
                                             <td class="px-6 py-3 text-right">
@@ -468,42 +625,206 @@ async function renderBudgetTab(root, p, budgetObj) {
         </div>
     `;
 
-    // ── OPTIMISTIC UI: ADD TO BUDGET ────────────────────
-    window.addToBudget = async (nombre, costo, pId) => {
+    // ── OPTIMISTIC UI: ADD TO BUDGET (MULTI-PRESUPUESTO) ────────────────────
+    window.addToBudget = async (nombre, costo, pId, diente = null, tipoOrigen = 'manual') => {
         const p = currentPatients.find(patient => patient.id == pId);
         if (!p) return;
 
-        let b = p.presupuesto_json || { items: [], abonos: [] };
-        if (Array.isArray(b)) b = { items: b, abonos: [] };
-        if (!b.items) b.items = [];
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+        if (!presupuestoActivo) {
+            alert('No hay presupuesto activo');
+            return;
+        }
 
+        if (!presupuestoActivo.items) presupuestoActivo.items = [];
+
+        const tipoItem = (diente && tipoOrigen === 'odontograma') ? 'odontograma' : 'manual';
+        
         // OPTIMISTIC UPDATE
         const newItem = {
             nombre,
             costo: parseFloat(costo),
-            diente: null, // Manual item
+            diente: diente,
             estado: 'PENDIENTE',
-            fecha: new Date().toISOString()
+            fecha: new Date().toISOString(),
+            tipo: tipoItem
         };
-        b.items.push(newItem);
-        p.presupuesto_json = b;
+        presupuestoActivo.items.push(newItem);
+        p.presupuesto_json = budgetData;
 
         // Visual feedback immediately
         window.renderizarModuloClinico(pId, 'presupuesto');
 
         // BACKGROUND PERSIST
-        supabase.from('PACIENTES').update({ presupuesto_json: b }).eq('id', pId).then(({ error }) => {
+        supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId).then(({ error }) => {
             if (error) console.error('Error persistiendo presupuesto:', error);
         });
     };
 
-    // ── REFLEJO CLÍNICO: SYNC FROM BUDGET TO ODONTOGRAM ────────────────────
+    // ── CAMBIAR PRESUPUESTO ACTIVO ────────────────────────────────────────────
+    window.cambiarPresupuesto = (pId, presupuestoId) => {
+        const p = currentPatients.find(patient => patient.id == pId);
+        if (!p) return;
+        
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        budgetData.presupuesto_activo = presupuestoId;
+        p.presupuesto_json = budgetData;
+        
+        window.renderizarModuloClinico(pId, 'presupuesto');
+    };
+
+    // ── CREAR NUEVO PRESUPUESTO ────────────────────────────────────────────────
+    window.crearNuevoPresupuesto = async (pId) => {
+        const p = currentPatients.find(patient => patient.id == pId);
+        if (!p) return;
+
+        const nombre = prompt('Ingrese nombre para el nuevo plan de tratamiento:', 'Nuevo Plan de Tratamiento');
+        if (!nombre) return;
+
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+
+        const nuevoId = 'presupuesto_' + Date.now();
+        const nuevoPresupuesto = {
+            id: nuevoId,
+            nombre: nombre,
+            fecha_creacion: new Date().toISOString(),
+            items: [],
+            abonos: []
+        };
+
+        budgetData.presupuestos.push(nuevoPresupuesto);
+        budgetData.presupuesto_activo = nuevoId;
+        p.presupuesto_json = budgetData;
+
+        // Persist
+        await supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId);
+
+        window.renderizarModuloClinico(pId, 'presupuesto');
+    };
+
+    // ── MOSTRAR CATÁLOGO DE SERVICIOS PARA AÑADIR MANUAL ─────────────────────
+    window.mostrarCatalogoServicios = async (pId) => {
+        const p = currentPatients.find(patient => patient.id == pId);
+        if (!p) return;
+
+        let { data: rawCatalog } = await supabase.from('TRATAMIENTOS').select('*');
+        
+        let catalog = (rawCatalog || []).map(item => ({
+            nombre: item.TRATAMIENTO || item.tratamiento || item.nombre || 'Sin Nombre',
+            costo: parseFloat(item.VALOR || item.valor || item.costo || 0),
+            categoria: item.CATEGORIA || item.categoria || 'AMBOS'
+        }));
+
+        const fallbackCatalog = [
+            { nombre: 'Profilaxis Dental Adulto', costo: 35.0, categoria: 'ADULTO' },
+            { nombre: 'Profilaxis Dental Niño', costo: 25.0, categoria: 'NIÑO' },
+            { nombre: 'Consultoría Especializada', costo: 40.0, categoria: 'AMBOS' },
+            { nombre: 'Resina Estética Simple', costo: 45.0, categoria: 'ADULTO' },
+            { nombre: 'Ortodoncia Fija', costo: 1200.0, categoria: 'AMBOS' },
+            { nombre: 'Blanqueamiento Dental', costo: 250.0, categoria: 'ADULTO' },
+            { nombre: 'Extracción Dental', costo: 50.0, categoria: 'AMBOS' },
+            { nombre: 'Tratamiento de Conducto', costo: 150.0, categoria: 'AMBOS' }
+        ];
+
+        if (catalog.length === 0) catalog = fallbackCatalog;
+
+        const categoriaFiltro = (parseInt(p['EDAD']) < 17) ? 'NIÑO' : 'ADULTO';
+        const filteredCatalog = catalog.filter(c => c.categoria === categoriaFiltro || c.categoria === 'AMBOS');
+
+        // Crear modal
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-[30000] bg-black/50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-card shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-black/5 flex justify-between items-center">
+                    <h3 class="text-xl font-display font-extrabold text-dark">Añadir Servicio Manual</h3>
+                    <button onclick="this.closest('.fixed').remove()" class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center hover:bg-slate-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2"/></svg>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-black/5">
+                    <input type="text" id="buscador-servicios" placeholder="Buscar servicio..." class="sach-input w-full" oninput="window.filtrarServicios(this.value)">
+                </div>
+                <div class="overflow-y-auto flex-grow p-4 space-y-2" id="catalogo-servicios">
+                    ${filteredCatalog.map(s => `
+                        <button onclick="window.agregarItemManual('${pId}', '${s.nombre}', ${s.costo}); this.closest('.fixed').remove();" 
+                                class="w-full flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-black/5 hover:border-primary hover:bg-white transition-all text-left">
+                            <div>
+                                <p class="font-bold text-dark text-sm">${s.nombre}</p>
+                                <p class="text-[10px] text-slate-400">${s.categoria}</p>
+                            </div>
+                            <span class="font-bold text-primary">$${s.costo.toFixed(2)}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    };
+
+    // ── FILTRAR SERVICIOS EN MODAL ────────────────────────────────────────────
+    window.filtrarServicios = (termino) => {
+        const items = document.querySelectorAll('#catalogo-servicios button');
+        const term = termino.toLowerCase();
+        items.forEach(item => {
+            const texto = item.textContent.toLowerCase();
+            item.style.display = texto.includes(term) ? 'flex' : 'none';
+        });
+    };
+
+    // ── AGREGAR ITEM MANUAL AL PRESUPUESTO ACTIVO ───────────────────────────
+    window.agregarItemManual = async (pId, nombre, costo) => {
+        const p = currentPatients.find(patient => patient.id == pId);
+        if (!p) return;
+
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+        if (!presupuestoActivo) {
+            alert('No hay presupuesto activo');
+            return;
+        }
+
+        if (!presupuestoActivo.items) presupuestoActivo.items = [];
+
+        const newItem = {
+            nombre: nombre,
+            costo: parseFloat(costo),
+            diente: 'MANUAL',
+            tipo: 'manual',
+            _origen: 'manual',
+            estado: 'PENDIENTE',
+            fecha: new Date().toISOString()
+        };
+
+        presupuestoActivo.items.push(newItem);
+        p.presupuesto_json = budgetData;
+
+        // Persist
+        await supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId);
+
+        window.renderizarModuloClinico(pId, 'presupuesto');
+    };
+
+    // ── REFLEJO CLÍNICO: SYNC FROM BUDGET TO ODONTOGRAM (MULTI-PRESUPUESTO) ────────────────────
     window.syncBudgetToOdontogram = (pId) => {
         const p = currentPatients.find(patient => patient.id == pId);
         if (!p) return;
 
-        const budget = p.presupuesto_json || { items: [] };
-        const items = budget.items || [];
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+        if (!presupuestoActivo) return;
+
+        const items = presupuestoActivo.items || [];
 
         let odont = p.odontograma_json || { permanentes: {}, temporales: {} };
         if (!odont.permanentes) {
@@ -544,15 +865,21 @@ async function renderBudgetTab(root, p, budgetObj) {
         supabase.from('PACIENTES').update({ odontograma_json: odont }).eq('id', pId).then(() => { });
     };
 
-    // ── OPTIMISTIC UI: ABONOS ────────────────────────────
+    // ── OPTIMISTIC UI: ABONOS (MULTI-PRESUPUESTO) ────────────────────────────
     window.promptAddAbono = async (pId) => {
         const p = currentPatients.find(patient => patient.id == pId);
         if (!p) return;
 
-        let b = p.presupuesto_json || { items: [], abonos: [] };
-        if (Array.isArray(b)) b = { items: b, abonos: [] };
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+        if (!presupuestoActivo) {
+            alert('No hay presupuesto activo');
+            return;
+        }
 
-        const { totalTratamiento, totalAbonado } = calcularTotalesPresupuesto(b);
+        const { totalTratamiento, totalAbonado } = calcularTotalesPresupuesto(presupuestoActivo);
         const maxPermitido = totalTratamiento - totalAbonado;
 
         if (maxPermitido <= 0) {
@@ -582,14 +909,15 @@ async function renderBudgetTab(root, p, budgetObj) {
             fecha: new Date().toISOString(),
             monto: monto,
             metodo: metodo,
-            nota: nota
+            nota: nota,
+            presupuesto_id: presupuestoActivo.id
         };
 
-        if (!b.abonos) b.abonos = [];
-        b.abonos.push(nuevoAbonoJSON);
-        b.total_abonado = b.abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
+        if (!presupuestoActivo.abonos) presupuestoActivo.abonos = [];
+        presupuestoActivo.abonos.push(nuevoAbonoJSON);
+        presupuestoActivo.total_abonado = presupuestoActivo.abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
 
-        const nuevoSaldo = totalTratamiento - b.total_abonado;
+        const nuevoSaldo = totalTratamiento - presupuestoActivo.total_abonado;
 
         // 1. Insertar en tabla maestra ABONO (Finanzas)
         const { error: errorAbono } = await supabase.from('ABONO').insert([{
@@ -598,7 +926,8 @@ async function renderBudgetTab(root, p, budgetObj) {
             'SALDO': nuevoSaldo,
             'TIPODEPAGO': metodo.toUpperCase(),
             'RESPONSABLE': responsable,
-            'ID_PACIENTE': p['ID DEL PACIENTE'] // Usamos la cédula para relación
+            'ID_PACIENTE': p['ID DEL PACIENTE'],
+            'PRESUPUESTO_ID': presupuestoActivo.id
         }]);
 
         if (errorAbono) {
@@ -607,27 +936,31 @@ async function renderBudgetTab(root, p, budgetObj) {
         }
 
         // 2. Actualizar JSON en PACIENTES
-        p.presupuesto_json = b;
+        p.presupuesto_json = budgetData;
         window.renderizarModuloClinico(pId, 'presupuesto');
 
-        await supabase.from('PACIENTES').update({ presupuesto_json: b }).eq('id', pId);
+        await supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId);
 
     };
 
     window.removeAbono = async (idx, pId) => {
         const p = currentPatients.find(patient => patient.id == pId);
+        if (!p) return;
 
-        let b = p.presupuesto_json || { items: [], abonos: [] };
-        if (Array.isArray(b)) b = { items: b, abonos: [] };
-        if (!b.items) b.items = [];
-        if (!b.abonos) b.abonos = [];
+        let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+        if (!presupuestoActivo) return;
 
-        b.abonos.splice(idx, 1);
-        b.total_abonado = b.abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
+        if (!presupuestoActivo.abonos) presupuestoActivo.abonos = [];
 
-        p.presupuesto_json = b;
+        presupuestoActivo.abonos.splice(idx, 1);
+        presupuestoActivo.total_abonado = presupuestoActivo.abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
+
+        p.presupuesto_json = budgetData;
         window.renderizarModuloClinico(pId, 'presupuesto');
-        supabase.from('PACIENTES').update({ presupuesto_json: b }).eq('id', pId).then(() => { });
+        supabase.from('PACIENTES').update({ presupuesto_json: budgetData }).eq('id', pId).then(() => { });
     };
 
     window.removeFromBudget = async (idx, pId) => {
@@ -638,16 +971,19 @@ async function renderBudgetTab(root, p, budgetObj) {
                 return;
             }
 
-            let b = p.presupuesto_json || { items: [], abonos: [] };
-            if (Array.isArray(b)) b = { items: b, abonos: [] };
-            if (!b.items) b.items = [];
-            if (!b.abonos) b.abonos = [];
+            let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+            if (!budgetData.presupuestos) budgetData.presupuestos = [];
+            
+            const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+            if (!presupuestoActivo) return;
 
-            const item = b.items[idx];
+            if (!presupuestoActivo.items) presupuestoActivo.items = [];
+
+            const item = presupuestoActivo.items[idx];
             if (!item) return;
 
             // 1. Limpiar Odontograma si tiene dientes asociados
-            if (item.diente && String(item.diente).trim() !== '') {
+            if (item.diente && String(item.diente).trim() !== '' && item.diente !== 'MANUAL') {
                 let odontData = p.odontograma_json || { permanentes: {}, temporales: {} };
                 if (!odontData.permanentes) odontData = { permanentes: { ...odontData }, temporales: {} };
 
@@ -674,16 +1010,16 @@ async function renderBudgetTab(root, p, budgetObj) {
                 supabase.from('PACIENTES').update({ odontograma_json: odontData }).eq('id', pId).then(() => { });
             }
 
-            // 2. Eliminar del presupuesto
-            b.items.splice(idx, 1);
-            p.presupuesto_json = b;
+            // 2. Eliminar del presupuesto activo
+            presupuestoActivo.items.splice(idx, 1);
+            p.presupuesto_json = budgetData;
 
             // Reflejo Clínico: Si eliminamos del presupuesto, debemos limpiar si era automático
             window.syncBudgetToOdontogram(pId);
 
             window.renderizarModuloClinico(pId, 'presupuesto');
             await supabase.from('PACIENTES').update({
-                presupuesto_json: b,
+                presupuesto_json: budgetData,
                 odontograma_json: p.odontograma_json
             }).eq('id', pId);
 
@@ -694,25 +1030,27 @@ async function renderBudgetTab(root, p, budgetObj) {
     };
 }
 
-// ── MANUAL PRICE UPDATES (DANTE REQ) ────────────────────
+// ── MANUAL PRICE UPDATES (MULTI-PRESUPUESTO) ────────────────────
 window.updateBudgetPrice = (idx, val, pId) => {
     const p = currentPatients.find(patient => patient.id == pId);
     if (!p) return;
 
-    let b = p.presupuesto_json || { items: [], abonos: [] };
-    if (Array.isArray(b)) b = { items: b, abonos: [] };
+    let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+    if (!budgetData.presupuestos) budgetData.presupuestos = [];
+    
+    const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+    if (!presupuestoActivo) return;
+
+    if (!presupuestoActivo.items) presupuestoActivo.items = [];
 
     const nuevoCosto = parseFloat(val) || 0;
-    if (b.items[idx]) {
-        b.items[idx].costo = nuevoCosto;
+    if (presupuestoActivo.items[idx]) {
+        presupuestoActivo.items[idx].costo = nuevoCosto;
     }
-    p.presupuesto_json = b;
-
-    // Reflejo Clínico (Sync to memory to reflect later)
-    window.syncBudgetToOdontogram(pId);
+    p.presupuesto_json = budgetData;
 
     // Recalcular instantáneo en UI
-    const { totalTratamiento, totalAbonado, saldoPendiente } = calcularTotalesPresupuesto(b);
+    const { totalTratamiento, saldoPendiente } = calcularTotalesPresupuesto(presupuestoActivo);
 
     const totalEl = document.getElementById('total-presupuesto-val');
     const saldoEl = document.getElementById('saldo-pendiente-val');
@@ -773,41 +1111,53 @@ window.saveCurrentBudget = async (pId) => {
 
 
 async function renderHistoryTab(root, p, history) {
-    const budget = p.presupuesto_json || { items: [] };
-    const items = Array.isArray(budget) ? budget : (budget.items || []);
-
-    const { totalTratamiento, totalAbonado, saldoPendiente } = calcularTotalesPresupuesto(budget);
+    // MULTI-PRESUPUESTO: Obtener el presupuesto activo
+    let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+    if (!budgetData.presupuestos) budgetData.presupuestos = [];
+    
+    const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo) || budgetData.presupuestos[0];
+    const items = presupuestoActivo?.items || [];
+    const abonos = presupuestoActivo?.abonos || [];
+    
+    // Calcular totales del presupuesto activo
+    const totalTratamiento = items.reduce((acc, item) => acc + (parseFloat(item.costo) || 0), 0);
+    const totalAbonado = abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
+    const saldoPendiente = totalTratamiento - totalAbonado;
+    
+    // Filtrar history para mostrar solo notas del presupuesto activo
+    const historyFiltrado = (history || []).filter(h => !h.presupuesto_id || h.presupuesto_id === presupuestoActivo?.id);
 
     root.innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Timeline View -->
-            <div class="space-y-8">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Linea de Tiempo Clínica</h4>
-                    <button onclick="document.getElementById('evo-note').focus();" class="text-[10px] font-extrabold text-accent uppercase tracking-wider flex items-center gap-1.5 hover:scale-105 transition-all">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="3" stroke-linecap="round"/></svg>
-                        ➕ Añadir Nota de Evolución
+            <div class="space-y-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Línea de Tiempo</h4>
+                    <button onclick="document.getElementById('evo-note').focus();" class="text-[9px] font-extrabold text-accent uppercase tracking-wider flex items-center gap-1 hover:scale-105 transition-all">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="3" stroke-linecap="round"/></svg>
+                        Añadir
                     </button>
                 </div>
-                <div class="relative border-l-2 border-slate-100 pl-6 space-y-10 py-2">
-                    ${history.length === 0 ? `
-                        <div class="text-slate-300 font-bold text-[10px] uppercase tracking-widest text-center py-10">Sin historias registradas en la línea del tiempo</div>
-                    ` : history.map((h, idx) => `
+                <div class="relative border-l-2 border-slate-100 pl-4 space-y-6 py-1">
+                    ${historyFiltrado.length === 0 ? `
+                        <div class="text-slate-300 font-bold text-[9px] uppercase tracking-widest text-center py-6">Sin historias registradas</div>
+                    ` : historyFiltrado.map((h, idx) => `
                         <div class="relative group">
-                            <span class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-white border-4 ${h.tipo === 'manual' ? 'border-accent' : 'border-primary'} shadow-sm z-10 transition-colors"></span>
-                            <div class="bg-white p-5 rounded-card border ${h.tipo === 'manual' ? 'border-accent/20' : 'border-black/5'} shadow-soft transition-all hover:scale-[1.01] relative overflow-hidden">
-                                ${h.tipo === 'manual' ? `<div class="absolute top-0 right-0 w-12 h-12 bg-accent/5 rounded-bl-3xl flex items-center justify-center text-accent/40"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2"/></svg></div>` : ''}
+                            <span class="absolute -left-[25px] top-1 w-3 h-3 rounded-full bg-white border-3 ${h.tipo === 'manual' ? 'border-accent' : 'border-primary'} shadow-sm z-10 transition-colors"></span>
+                            <div class="bg-white p-3 rounded-card border ${h.tipo === 'manual' ? 'border-accent/20' : 'border-black/5'} shadow-soft transition-all hover:scale-[1.01] relative overflow-hidden">
+                                ${h.tipo === 'manual' ? `<div class="absolute top-0 right-0 w-8 h-8 bg-accent/5 rounded-bl-2xl flex items-center justify-center text-accent/40"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2"/></svg></div>` : ''}
                                 
-                                <div class="flex justify-between items-start mb-2">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${new Date(h.fecha).toLocaleString()}</p>
-                                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onclick="window.editHistoryEntry(${idx}, '${p.id}')" class="text-slate-400 hover:text-primary transition-colors">📝</button>
-                                        <button onclick="window.deleteHistoryEntry(${idx}, '${p.id}')" class="text-slate-400 hover:text-red-500 transition-colors">🗑️</button>
+                                <div class="flex justify-between items-start mb-1.5">
+                                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">${new Date(h.fecha).toLocaleString()}</p>
+                                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onclick="window.editHistoryEntry(${idx}, '${p.id}')" class="text-slate-400 hover:text-primary transition-colors text-[10px]">📝</button>
+                                        <button onclick="window.deleteHistoryEntry(${idx}, '${p.id}')" class="text-slate-400 hover:text-red-500 transition-colors text-[10px]">🗑️</button>
                                     </div>
                                 </div>
                                 
-                                <p class="text-sm font-bold text-dark mb-1">${h.doctor || 'Dra. Lucía Quintero'}</p>
-                                <div id="history-entry-${idx}" class="text-sm text-slate-600 font-medium whitespace-pre-wrap leading-relaxed">${h.nota}</div>
+                                <p class="text-xs font-bold text-dark mb-1">${h.doctor || 'Dra. Lucía Quintero'}</p>
+                                ${h.presupuesto_nombre ? `<span class="inline-block px-1.5 py-0.5 bg-primary/10 text-primary text-[7px] font-bold rounded-full mb-1.5">${h.presupuesto_nombre}</span>` : ''}
+                                <div id="history-entry-${idx}" class="text-xs text-slate-600 font-medium whitespace-pre-wrap leading-relaxed">${h.nota}</div>
                             </div>
                         </div>
                     `).join('')}
@@ -815,27 +1165,27 @@ async function renderHistoryTab(root, p, history) {
             </div>
 
             <!-- Suggested Treatment Plan -->
-            <div class="space-y-10">
+            <div class="space-y-4">
                 <!-- Financial Status Summary Stick-on-Clinical -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 flex flex-col items-center">
-                        <p class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-2">Total Pagado</p>
-                        <p class="text-2xl font-display font-extrabold text-emerald-600">$${totalAbonado.toFixed(2)}</p>
-                        <div class="mt-2 w-full h-1 bg-emerald-100 rounded-full overflow-hidden">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex flex-col items-center">
+                        <p class="text-[8px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Pagado</p>
+                        <p class="text-xl font-display font-extrabold text-emerald-600">$${totalAbonado.toFixed(2)}</p>
+                        <div class="mt-1 w-full h-0.5 bg-emerald-100 rounded-full overflow-hidden">
                              <div class="h-full bg-emerald-400" style="width: ${Math.min(totalAbonado / (totalTratamiento || 1) * 100, 100)}%"></div>
                         </div>
                     </div>
-                    <div class="bg-primary/5 p-6 rounded-3xl border border-primary/10 flex flex-col items-center">
-                        <p class="text-[9px] font-bold text-primary/60 uppercase tracking-widest mb-2">Saldo a Cobrar</p>
-                        <p class="text-2xl font-display font-extrabold text-primary">$${saldoPendiente.toFixed(2)}</p>
-                        <p class="text-[10px] font-bold text-primary/40 uppercase mt-auto">Financiero S.A.C.H.</p>
+                    <div class="bg-primary/5 p-4 rounded-2xl border border-primary/10 flex flex-col items-center">
+                        <p class="text-[8px] font-bold text-primary/60 uppercase tracking-widest mb-1">Pendiente</p>
+                        <p class="text-xl font-display font-extrabold text-primary">$${saldoPendiente.toFixed(2)}</p>
+                        <p class="text-[8px] font-bold text-primary/40 uppercase mt-auto">S.A.C.H.</p>
                     </div>
                 </div>
 
-                <div class="bg-slate-50 p-8 rounded-card border border-black/5">
-                    <h4 class="text-sm font-display font-extrabold text-primary mb-6 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2"/></svg>
-                        Plan de Tratamiento Sugerido
+                <div class="bg-slate-50 p-4 rounded-card border border-black/5">
+                    <h4 class="text-xs font-display font-extrabold text-primary mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2"/></svg>
+                        Plan Sugerido
                     </h4>
                     
                     <div class="space-y-3">
@@ -909,12 +1259,19 @@ async function renderHistoryTab(root, p, history) {
                 tipo: 'manual'
             };
 
+            let budgetData = p.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+            if (!budgetData.presupuestos) budgetData.presupuestos = [];
+            const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+            
             const { data: patient } = await supabase.from('PACIENTES').select('plan_tratamiento_json').eq('id', p.id).single();
             const currentHistory = patient.plan_tratamiento_json || [];
+            
+            newEntry.presupuesto_id = presupuestoActivo ? presupuestoActivo.id : null;
+            newEntry.presupuesto_nombre = presupuestoActivo ? presupuestoActivo.nombre : null;
             currentHistory.unshift(newEntry);
 
             await supabase.from('PACIENTES').update({ 'plan_tratamiento_json': currentHistory }).eq('id', p.id);
-            p.plan_tratamiento_json = currentHistory; // Sync local
+            p.plan_tratamiento_json = currentHistory;
             window.renderizarModuloClinico(p.id, 'historia');
         });
     }
@@ -1025,10 +1382,15 @@ window.completeTreatment = async (itemIdx, pId) => {
         const { data: patient } = await supabase.from('PACIENTES').select('*').eq('id', pId).single();
         if (!patient) throw new Error('No se pudo obtener el paciente de la DB');
 
-        let budget = patient.presupuesto_json || { items: [] };
-        if (Array.isArray(budget)) budget = { items: budget, abonos: [] };
-
-        const item = budget.items[itemIdx];
+        // MULTI-PRESUPUESTO: Estructura con array de presupuestos
+        let budgetData = patient.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+        if (!budgetData.presupuestos) budgetData.presupuestos = [];
+        
+        const presupuestoActivo = budgetData.presupuestos.find(bp => bp.id === budgetData.presupuesto_activo);
+        if (!presupuestoActivo) throw new Error('No hay presupuesto activo');
+        
+        if (!presupuestoActivo.items) presupuestoActivo.items = [];
+        const item = presupuestoActivo.items[itemIdx];
         if (!item) throw new Error('Tratamiento no encontrado en el índice: ' + itemIdx);
 
         // 1. Mark as Existente
@@ -1036,34 +1398,46 @@ window.completeTreatment = async (itemIdx, pId) => {
         item.fecha_completado = new Date().toISOString();
 
         // 2. Update Odontogram
-        let odont = patient.odontograma_json || {};
+        let odont = patient.odontograma_json || { permanentes: {}, temporales: {} };
+        if (!odont.permanentes) odont.permanentes = {};
+        if (!odont.temporales) odont.temporales = {};
+        
         if (item.diente) {
             const teethIds = String(item.diente).split(',').map(d => d.trim());
             teethIds.forEach(tId => {
-                if (tId && odont[tId]) {
-                    odont[tId].status = 'realizado';
+                if (tId && tId !== 'Dentadura Completa' && !String(tId).includes('Arco')) {
+                    const dId = parseInt(tId);
+                    if (!isNaN(dId)) {
+                        if (dId >= 51 && odont.temporales?.[dId]) {
+                            odont.temporales[dId].status = 'realizado';
+                        } else if (dId < 51 && odont.permanentes?.[dId]) {
+                            odont.permanentes[dId].status = 'realizado';
+                        }
+                    }
                 }
             });
         }
 
-        // 3. Clinical History
+        // 3. Clinical History - vincular al presupuesto activo
         let history = patient.plan_tratamiento_json || [];
         history.unshift({
             fecha: new Date().toISOString(),
             doctor: 'Dra. Lucía Quintero',
             nota: `✅ Procedimiento Realizado: ${item.nombre}${item.diente ? ` en pieza ${item.diente}` : ''}.`,
-            tipo: 'automatica'
+            tipo: 'automatica',
+            presupuesto_id: presupuestoActivo.id,
+            presupuesto_nombre: presupuestoActivo.nombre
         });
 
         // 4. Update
         await supabase.from('PACIENTES').update({
-            presupuesto_json: budget,
+            presupuesto_json: budgetData,
             odontograma_json: odont,
             plan_tratamiento_json: history
         }).eq('id', pId);
 
         // Sync local
-        p.presupuesto_json = budget;
+        p.presupuesto_json = budgetData;
         p.odontograma_json = odont;
         p.plan_tratamiento_json = history;
 
@@ -1077,6 +1451,104 @@ window.completeTreatment = async (itemIdx, pId) => {
 };
 
 // Import handled at top of file
+
+// GENERADOR DE ID TEMPORAL (ID-AUTO) - SACH Neo-Medical
+window.generarIdTemporal = () => {
+    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let resultado = 'SACH-';
+    for (let i = 0; i < 5; i++) {
+        resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+    }
+    
+    const inputCedula = document.getElementById('p-cedula');
+    if (inputCedula) {
+        inputCedula.value = resultado;
+        inputCedula.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+        
+        const badge = document.getElementById('id-temporal-badge');
+        if (badge) {
+            badge.classList.remove('hidden');
+        }
+        
+        setTimeout(() => {
+            inputCedula.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+        }, 2000);
+    }
+};
+
+// CÁLCULO DE EDAD Y DETECCIÓN DE DENTICIÓN - SACH Neo-Medical
+window.calcularEdadYDenticion = () => {
+    const fechaInput = document.getElementById('p-fecha-nac');
+    const edadDisplay = document.getElementById('edad-display');
+    const denticionDisplay = document.getElementById('denticion-display');
+    
+    if (!fechaInput || !fechaInput.value) {
+        if (edadDisplay) edadDisplay.classList.add('hidden');
+        if (denticionDisplay) denticionDisplay.classList.add('hidden');
+        return null;
+    }
+    
+    const fechaNac = new Date(fechaInput.value + 'T00:00:00');
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+    const mes = hoy.getMonth() - fechaNac.getMonth();
+    
+    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
+        edad--;
+    }
+    
+    // Determinar tipo de dentición
+    let denticion = '';
+    let denticionClase = '';
+    
+    if (edad >= 0 && edad <= 5) {
+        denticion = 'INFANTIL (Dientes de Leche)';
+        denticionClase = 'bg-purple-100 text-purple-700';
+    } else if (edad >= 6 && edad <= 12) {
+        denticion = 'MIXTO (Dentición Mixta)';
+        denticionClase = 'bg-amber-100 text-amber-700';
+    } else {
+        denticion = 'ADULTO (Dentición Permanente)';
+        denticionClase = 'bg-emerald-100 text-emerald-700';
+    }
+    
+    // Mostrar edad
+    if (edadDisplay) {
+        edadDisplay.textContent = `${edad} años`;
+        edadDisplay.classList.remove('hidden');
+        
+        // Color según edad
+        if (edad < 6) {
+            edadDisplay.className = 'absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded-lg bg-purple-100 text-purple-700';
+        } else if (edad < 13) {
+            edadDisplay.className = 'absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-100 text-amber-700';
+        } else {
+            edadDisplay.className = 'absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700';
+        }
+    }
+    
+    // Mostrar tipo de dentición
+    if (denticionDisplay) {
+        denticionDisplay.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/></svg> ${denticion}`;
+        denticionDisplay.className = `mt-2 text-[9px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 ${denticionClase}`;
+    }
+    
+    return { edad, denticion };
+};
+
+// Función auxiliar para calcular edad (usada en el guardado)
+function calcularEdad(fechaISO) {
+    if (!fechaISO) return null;
+    const fechaNac = new Date(fechaISO + 'T00:00:00');
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+    const mes = hoy.getMonth() - fechaNac.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
+        edad--;
+    }
+    return edad >= 0 ? edad : 0;
+}
+
 window.openNewPatientModal = async (id = null) => {
     let p = null;
     if (id) {
@@ -1116,11 +1588,25 @@ window.openNewPatientModal = async (id = null) => {
                     </div>
                     <div class="sach-input-container">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Cédula / DNI *</p>
-                        <input type="text" id="p-cedula" class="sach-input bg-white font-bold text-primary" required>
+                        <div class="flex gap-2">
+                            <input type="text" id="p-cedula" class="sach-input bg-white font-bold text-primary flex-grow" placeholder="Ingrese número de cédula" required>
+                            <button type="button" onclick="window.generarIdTemporal()" class="sach-button variant-set bg-amber-400 !h-12 !px-4 text-[10px] font-bold shadow-soft hover:bg-amber-500 transition-all" title="Generar ID Temporal">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/></svg>
+                                ID TEMPORAL
+                            </button>
+                        </div>
+                        <p id="id-temporal-badge" class="hidden mt-2 text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg inline-flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/></svg>
+                            ID Temporal generado - Requiere actualización posterior
+                        </p>
                     </div>
                     <div class="sach-input-container">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Fecha de Nacimiento</p>
-                        <input type="date" id="p-fecha-nac" class="sach-input bg-white font-bold cursor-pointer">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Fecha de Nacimiento *</p>
+                        <div class="relative">
+                            <input type="date" id="p-fecha-nac" class="sach-input bg-white font-bold cursor-pointer" required onchange="window.calcularEdadYDenticion()">
+                            <span id="edad-display" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded-lg"></span>
+                        </div>
+                        <p id="denticion-display" class="hidden mt-2 text-[9px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1"></p>
                     </div>
                     <div class="sach-input-container">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Teléfono Celular *</p>
@@ -1256,6 +1742,22 @@ window.openNewPatientModal = async (id = null) => {
 
     document.getElementById('new-patient-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // VALIDACIÓN: Fecha de nacimiento obligatoria
+        const fechaNacInput = document.getElementById('p-fecha-nac');
+        if (!fechaNacInput || !fechaNacInput.value) {
+            alert('⚠️ La Fecha de Nacimiento es obligatorio. Por favor ingrese la fecha del paciente.');
+            fechaNacInput?.focus();
+            return;
+        }
+
+        // VALIDACIÓN: Cédula o ID obligatorio
+        const cedulaInput = document.getElementById('p-cedula');
+        if (!cedulaInput || !cedulaInput.value.trim()) {
+            alert('⚠️ La Cédula o ID es obligatorio. Use el botón "ID Temporal" si no tiene cédula.');
+            cedulaInput?.focus();
+            return;
+        }
 
         const submitBtn = e.target.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
@@ -1407,13 +1909,6 @@ window.deletePatient = async (id) => {
 
 };
 
-function calcularEdad(fechaNac) {
-    if (!fechaNac) return null;
-    const diff_ms = Date.now() - new Date(fechaNac).getTime();
-    const age_dt = new Date(diff_ms);
-    return Math.abs(age_dt.getUTCFullYear() - 1970).toString();
-}
-
 function formatDateToDMY(dateStr) {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
@@ -1471,13 +1966,39 @@ window.printClinicalRecord = async (pId) => {
     `;
     document.body.appendChild(loadingOverlay);
 
-    // Preparar datos financieros
-    let b = patientDoc.presupuesto_json || { items: [], abonos: [], total_abonado: 0 };
-    if (Array.isArray(b)) b = { items: b, abonos: [], total_abonado: 0 };
-    const items = b.items || [];
-    const total = items.reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
-    const totalAbonado = b.total_abonado || 0;
-    const saldo = total - totalAbonado;
+    // Preparar datos financieros - Soporte multi-presupuesto
+    let budgetData = patientDoc.presupuesto_json || { presupuestos: [], presupuesto_activo: null };
+    
+    // Formato antiguo de compatibilidad
+    if (budgetData.items && !budgetData.presupuestos) {
+        budgetData = {
+            presupuestos: [{
+                id: 'presupuesto_1',
+                nombre: 'Plan de Tratamiento Inicial',
+                fecha_creacion: new Date().toISOString(),
+                items: budgetData.items || [],
+                abonos: budgetData.abonos || []
+            }],
+            presupuesto_activo: 'presupuesto_1'
+        };
+    }
+
+    const presupuestos = budgetData.presupuestos || [];
+    const presupuestoActivo = presupuestos.find(p => p.id === budgetData.presupuesto_activo) || presupuestos[0];
+    
+    // Calcular totales generales
+    let totalGeneral = 0;
+    let totalAbonadoGeneral = 0;
+    presupuestos.forEach(pres => {
+        const items = pres.items || [];
+        const abonos = pres.abonos || [];
+        totalGeneral += items.reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
+        totalAbonadoGeneral += abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
+    });
+    const saldoGeneral = totalGeneral - totalAbonadoGeneral;
+    
+    // Items del presupuesto activo para mostrar en la tabla principal
+    const activeItems = presupuestoActivo?.items || [];
 
     // Capturar Odontograma
     let odontImg = '';
@@ -1504,29 +2025,98 @@ window.printClinicalRecord = async (pId) => {
             const extra = odontNode.querySelectorAll('#odont-face-modal, .odont-actions, .loading-state');
             extra.forEach(el => el.remove());
 
-            const canvas = await html2canvas(odontNode, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                allowTaint: false
-            });
-            odontImg = canvas.toDataURL('image/png');
+            // Verificar que html2canvas esté disponible
+            if (typeof html2canvas === 'undefined') {
+                console.error('html2canvas no está cargado. Verifique la conexión a internet o la CDN.');
+                alert('Error: html2canvas no está disponible. Verifique su conexión a internet.');
+            } else {
+                try {
+                    const canvas = await html2canvas(odontNode, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        allowTaint: false
+                    });
+                    odontImg = canvas.toDataURL('image/png');
+                } catch (canvasError) {
+                    console.error('Error en html2canvas:', canvasError);
+                    alert('Error al generar la imagen del odontograma: ' + canvasError.message);
+                }
+            }
         }
     } catch (e) {
-        console.warn('Error capturando odontograma para impresión:', e);
+        console.error('Error capturando odontograma para impresión:', e);
+        alert('Error al preparar el odontograma para impresión: ' + e.message);
     } finally {
         if (hiddenContainer && hiddenContainer.parentNode) {
             document.body.removeChild(hiddenContainer);
         }
     }
 
-    const printWin = window.open('', '_blank');
+    // Generar nombre de archivo seguro basado en el nombre del paciente
+    const pacienteNombre = patientDoc['NOMBRE DEL PACIENTE'] || 'Paciente';
+    const safeFileName = pacienteNombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g, '_').replace(/\s+/g, '_');
+    const fileName = `Reporte_Clinico_${safeFileName}.html`;
+
+    const printWin = window.open(fileName, '_blank');
     if (!printWin) {
         alert("El navegador bloqueó la ventana de impresión. Por favor, permita las ventanas emergentes.");
         document.body.removeChild(loadingOverlay);
         return;
     }
+
+    // Generar HTML de todos los presupuestos
+    let presupuestosHTML = '';
+    presupuestos.forEach((pres, idx) => {
+        const items = pres.items || [];
+        const abonos = pres.abonos || [];
+        const totalPres = items.reduce((acc, i) => acc + (parseFloat(i.costo) || 0), 0);
+        const totalAbonadoPres = abonos.reduce((acc, a) => acc + (parseFloat(a.monto) || 0), 0);
+        const saldoPres = totalPres - totalAbonadoPres;
+        const fechaCreacion = pres.fecha_creacion ? new Date(pres.fecha_creacion).toLocaleDateString() : 'Sin fecha';
+        
+        presupuestosHTML += `
+            <div style="margin-bottom: 30px; page-break-inside: avoid;">
+                <h5 style="font-size: 12px; font-weight: 800; color: #0F4C5C; margin-bottom: 10px; padding: 8px 12px; background: #f0fdfa; border-radius: 8px; border-left: 3px solid #00BFA6;">
+                    ${pres.nombre || 'Plan de Tratamiento'} - Creado: ${fechaCreacion}
+                </h5>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tratamiento / Procedimiento</th>
+                            <th>Pieza</th>
+                            <th style="text-align: right;">Inversión (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Sin procedimientos registrados</td></tr>' :
+            items.map(i => `
+                            <tr>
+                                <td>${i.nombre}</td>
+                                <td>${i.diente === 'MANUAL' ? 'Manual' : (i.diente || 'General')}</td>
+                                <td style="text-align: right;">$${parseFloat(i.costo).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f8fafc;">
+                            <td colspan="2" style="font-weight: 700;">Subtotal:</td>
+                            <td style="text-align: right; font-weight: 700;">$${totalPres.toFixed(2)}</td>
+                        </tr>
+                        <tr style="background: #ecfdf5;">
+                            <td colspan="2" style="color: #059669; font-weight: 700;">Abonado:</td>
+                            <td style="text-align: right; color: #059669; font-weight: 700;">-$${totalAbonadoPres.toFixed(2)}</td>
+                        </tr>
+                        <tr style="background: #fff7ed;">
+                            <td colspan="2" style="color: #ea580c; font-weight: 800;">Saldo Pendiente:</td>
+                            <td style="text-align: right; color: #ea580c; font-weight: 800;">$${saldoPres.toFixed(2)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+    });
 
     printWin.document.write(`
         <!DOCTYPE html>
@@ -1593,7 +2183,7 @@ window.printClinicalRecord = async (pId) => {
                 <div class="page">
                     <!-- Encabezado -->
                     <div class="header">
-                        <div class="logo-box">LQ<span style="color: #00BFA6;">.</span></div>
+                        <img src="logo-lucia.png" alt="Logo Dra. Lucía Quintero" style="max-height: 60px; max-width: 200px;">
                         <div class="clinic-info">
                             <h1 class="clinic-name">Dra. Lucía Quintero</h1>
                             <p class="report-title">Reporte Clínico y Plan de Tratamiento</p>
@@ -1646,8 +2236,8 @@ window.printClinicalRecord = async (pId) => {
                             </tr>
                         </thead>
                         <tbody>
-                            ${items.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No se registran procedimientos en el plan sugerido</td></tr>' :
-            items.map(i => `
+                            ${activeItems.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No se registran procedimientos en el plan sugerido</td></tr>' :
+                activeItems.map(i => `
                                 <tr>
                                     <td>${i.nombre}</td>
                                     <td>${i.diente || 'General'}</td>
@@ -1662,24 +2252,30 @@ window.printClinicalRecord = async (pId) => {
                         <div class="summary-box">
                             <div class="summary-row">
                                 <span class="total-label">Total Presupuestado:</span>
-                                <span>$${total.toFixed(2)}</span>
+                                <span>$${totalGeneral.toFixed(2)}</span>
                             </div>
                             <div class="summary-row" style="color: #059669;">
                                 <span class="abono-label">Total Abonado:</span>
-                                <span>-$${totalAbonado.toFixed(2)}</span>
+                                <span>-$${totalAbonadoGeneral.toFixed(2)}</span>
                             </div>
                             <div class="summary-row saldo-row">
                                 <span>Saldo Pendiente:</span>
-                                <span>$${saldo.toFixed(2)}</span>
+                                <span>$${saldoGeneral.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Planes de Tratamiento Adicionales (si hay más de 1 presupuesto) -->
+                    ${presupuestos.length > 1 ? `
+                    <h4 class="section-title">Planes de Tratamiento Adicionales</h4>
+                    ${presupuestosHTML}
+                    ` : ''}
+
                     <!-- EVOLUCIÓN CLÍNICA (Timeline para Reporte) -->
                     <h4 class="section-title">Evolución Clínica y Notas del Especialista</h4>
                     <div style="margin-top: 15px;">
-                        ${patientDoc['plan_tratamiento_json'] && patientDoc['plan_tratamiento_json'].length > 0 ?
-            patientDoc['plan_tratamiento_json'].map(h => `
+                        ${(patientDoc['plan_tratamiento_json'] && patientDoc['plan_tratamiento_json'].length > 0) ?
+                patientDoc['plan_tratamiento_json'].map(h => `
                                 <div style="margin-bottom: 20px; border-left: 2px solid #00BFA6; padding-left: 15px; page-break-inside: avoid;">
                                     <p style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">
                                         ${new Date(h.fecha).toLocaleString()} - ${h.doctor || 'Dra. Lucía Quintero'}
@@ -1689,8 +2285,8 @@ window.printClinicalRecord = async (pId) => {
                                     </p>
                                 </div>
                             `).join('') :
-            '<p style="font-size: 10px; color: #94a3b8; font-style: italic;">No se registran procedimientos previos realizados o notas de evolución.</p>'
-        }
+                '<p style="font-size: 10px; color: #94a3b8; font-style: italic;">No se registran procedimientos previos realizados o notas de evolución.</p>'
+            }
                     </div>
 
                     <!-- Firmas -->
@@ -1705,23 +2301,26 @@ window.printClinicalRecord = async (pId) => {
                         </div>
                     </div>
 
-                    <!-- Footer Legal -->
-                    <div class="footer">
-                        Este documento es un reporte médico informativo con validez de 15 días tras su emisión.<br>
-                        S.A.C.H. - Sistema de Administración Clínica Holográfica | Neo-Medical Style
+                    <!-- Footer Legal con QR -->
+                    <div class="footer" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <div style="margin-bottom: 10px;">
+                                <img src="jvcreative.png" alt="JVCreative" style="max-height: 25px; opacity: 0.6;">
+                            </div>
+                            <div style="font-size: 7px; color: #94a3b8; margin-top: 5px;">Documento verificado</div>
+                            Este documento es un reporte médico informativo con validez de 15 días tras su emisión.<br>
+                            S.A.C.H. - Sistema de Administración Clínica Holográfica | Neo-Medical Style | Powered by JVCreative
+                        </div>
+                        <div style="text-align: right;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=Dra%20Lucía%20Quintero%20-%20Paciente:%20${encodeURIComponent(patientDoc['NOMBRE DEL PACIENTE'])}%20-%20Fecha:${encodeURIComponent(new Date().toLocaleDateString())}%20Hora:${encodeURIComponent(new Date().toLocaleTimeString())}" alt="Código de Verificación" style="width: 80px; height: 80px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <div style="font-size: 7px; color: #94a3b8; margin-top: 5px;">Verificación</div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="no-print" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);">
                     <button onclick="window.print()" style="padding: 12px 30px; background: #0F4C5C; color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">LANZAR IMPRESIÓN OFICIAL</button>
                 </div>
-
-                <script>
-                    window.onload = () => {
-                        // Opcional: auto-disparar impresión después de cargar las fuentes e imágenes
-                        // setTimeout(() => { window.print(); }, 500);
-                    };
-                </script>
             </body>
         </html>
     `);
@@ -1763,13 +2362,11 @@ let searchTimeout;
 document.addEventListener('input', (e) => {
     if (e.target.id === 'patient-search') {
         clearTimeout(searchTimeout);
-
+        currentPage = 1;
+        
         const listBody = document.getElementById('patients-list-body');
         if (listBody && e.target.value.trim() !== '') {
-            listBody.innerHTML = `<tr><td colspan="5" class="px-8 py-20 text-center"><span class="text-secondary font-bold animate-pulse text-[10px] tracking-widest uppercase">Buscando Directorio...</span></td></tr>`;
-        } else if (listBody && e.target.value.trim() === '') {
-            loadPatients('');
-            return;
+            listBody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center"><span class="text-secondary font-bold animate-pulse text-[10px] tracking-widest uppercase">Buscando...</span></td></tr>`;
         }
 
         searchTimeout = setTimeout(async () => {
@@ -1783,8 +2380,6 @@ document.addEventListener('input', (e) => {
                 if (!error && data) {
                     currentPatients = data;
                 }
-            } else {
-                currentPatients = [];
             }
             loadPatients(termo);
         }, 300);
@@ -1801,43 +2396,43 @@ async function renderVisualArchive(container, p) {
 
     container.innerHTML = `
         <div class="bg-white rounded-card border border-black/5 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-700 shadow-sm hover:shadow-md transition-all">
-            <div class="px-6 py-6 bg-slate-50/50 border-b border-black/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-soft border border-black/5 group overflow-hidden">
-                        <img src="logo-lucia.png" class="w-10 h-10 object-contain group-hover:scale-110 transition-transform" onerror="this.src='whatsapp.svg'; this.style.opacity='0.2'">
+            <div class="px-4 py-3 bg-slate-50/50 border-b border-black/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/5 group overflow-hidden">
+                        <img src="logo-lucia.png" class="w-8 h-8 object-contain group-hover:scale-110 transition-transform" onerror="this.src='whatsapp.svg'; this.style.opacity='0.2'">
                     </div>
                     <div>
-                        <h4 class="text-base font-display font-extrabold text-primary tracking-tight">Archivo de Diagnóstico Visual</h4>
+                        <h4 class="text-sm font-display font-extrabold text-primary tracking-tight">Archivo Visual</h4>
                         <div class="flex items-center gap-2 mt-0.5">
-                            <span class="px-2 py-0.5 bg-accent/10 text-accent rounded text-[8px] font-extrabold uppercase tracking-widest">Neo-Medical Suite</span>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Capacidad: ${images.length}/3 Archivos</p>
+                            <span class="px-1.5 py-0.5 bg-accent/10 text-accent rounded text-[7px] font-extrabold uppercase tracking-widest">Neo-Medical</span>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${images.length}/3</p>
                         </div>
                     </div>
                 </div>
-                <div class="flex gap-3 w-full md:w-auto">
+                <div class="flex gap-2 w-full md:w-auto">
                     <button onclick="window.uploadVisualFile('${pId}')" 
                             ${images.length >= 3 ? 'disabled title="Límite alcanzado"' : ''}
-                            class="flex-grow md:flex-grow-0 px-6 py-3 bg-primary text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-glow group disabled:opacity-50 disabled:cursor-not-allowed">
-                        <svg class="w-4 h-4 group-hover:-translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="3"/></svg>
-                        ⬆ Subir Foto / Rx
+                            class="flex-grow md:flex-grow-0 px-4 py-2 bg-primary text-white rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-primary/90 transition-all shadow-glow group disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="3"/></svg>
+                        Subir
                     </button>
-                    <button onclick="window.openVisualGallery('${pId}')" class="flex-grow md:flex-grow-0 px-6 py-3 bg-white text-slate-500 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all border border-black/5 shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>
-                        👁 Ver Galería
+                    <button onclick="window.openVisualGallery('${pId}')" class="flex-grow md:flex-grow-0 px-4 py-2 bg-white text-slate-500 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-all border border-black/5 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>
+                        Ver
                     </button>
                 </div>
             </div>
-            <div class="p-8">
+            <div class="p-4">
                 ${images.length === 0 ? `
-                    <div class="flex flex-col items-center justify-center py-14 border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/30">
-                        <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-soft mb-6">
-                            <svg class="w-10 h-10 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"/></svg>
+                    <div class="flex flex-col items-center justify-center py-8 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
+                            <svg class="w-6 h-6 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"/></svg>
                         </div>
-                        <p class="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Sin archivos de diagnóstico</p>
-                        <p class="text-[10px] text-slate-300 font-medium mt-2 max-w-xs text-center">Inicie la carga de Rx o fotos clínicas. Máximo 3 archivos de hasta 500KB para optimizar la velocidad.</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sin archivos</p>
+                        <p class="text-[9px] text-slate-300 font-medium mt-1 max-w-xs text-center">Máximo 3 archivos</p>
                     </div>
                 ` : `
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                         ${images.map((img, idx) => `
                             <div onclick="window.openVisualGallery('${pId}', ${idx})" class="aspect-video rounded-3xl border border-black/5 bg-slate-50 overflow-hidden relative group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-500">
                                 ${img.type?.includes('pdf') ? `

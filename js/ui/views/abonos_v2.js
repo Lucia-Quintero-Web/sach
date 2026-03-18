@@ -8,12 +8,27 @@ import { formatCurrency } from '../../utils/calculations.js';
 
 export async function renderAbonosView(container) {
     let abonosList = [];
-    let total = 0;
-    let count = 0;
-    let average = 0;
-
+    let pacientesMap = {};
+    
+    // Cálculos
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    
+    // Cargar pacientes para obtener datos de contacto
     try {
-        // Bypass 404/Null: Intentar cargar desde 'ABONO' o 'abonos'
+        const { data: pacientes } = await supabase
+            .from('PACIENTES')
+            .select('id, "NOMBRE DEL PACIENTE", "NOMBRE REPRESENTANTE", "CELULAR DEL REPRESENTANTE", "CELULAR DEL PACIENTE", presupuesto_json');
+        if (pacientes) {
+            pacientes.forEach(p => {
+                pacientesMap[p.id] = p;
+            });
+        }
+    } catch (err) {
+        console.error('Finanzas: Error cargando pacientes', err);
+    }
+    
+    try {
         const { data, error } = await supabase
             .from('ABONO')
             .select('*')
@@ -21,13 +36,27 @@ export async function renderAbonosView(container) {
 
         if (!error && data) {
             abonosList = data;
-        } else {
-            // Si hay error (ej. tabla no encontrada), abonosList se mantiene []
-            console.warn('Finanzas: Bypass activo para tabla vacía o no encontrada.', error?.message);
         }
     } catch (err) {
-        console.error('Finanzas: Error crítico de inicialización', err);
+        console.error('Finanzas: Error cargando abonos', err);
     }
+
+    // Calcular métricas
+    const total = abonosList.reduce((sum, a) => sum + (parseFloat(a.ABONO) || 0), 0);
+    const count = abonosList.length;
+    const average = count > 0 ? total / count : 0;
+    
+    // Ingresos del mes actual
+    const monthEarnings = abonosList.reduce((sum, a) => {
+        const d = new Date(a.created_at || a.FECHA);
+        if (d >= new Date(startOfMonth)) {
+            return sum + (parseFloat(a.ABONO) || 0);
+        }
+        return sum;
+    }, 0);
+
+    // Abonos pendientes (si hay campo de estado)
+    const pendingCount = abonosList.filter(a => a.ESTADO === 'Pendiente').length;
 
     let totalPresupuestos = 0;
     try {
@@ -38,80 +67,91 @@ export async function renderAbonosView(container) {
                 totalPresupuestos += items.reduce((sum, item) => sum + (parseFloat(item.costo) || 0), 0);
             });
         }
-    } catch (err) {
-        console.error('Error calculando total de presupuestos:', err);
-    }
+    } catch (err) {}
 
-    // Cálculos robustos (Safe Calculations)
-    total = abonosList.reduce((sum, a) => sum + (parseFloat(a.ABONO) || 0), 0);
-    count = abonosList.length;
-
-    // Realtime Subscription (Evitar duplicados)
+    // Realtime
     if (!window._abonosSubscription) {
         window._abonosSubscription = supabase.channel('custom-abonos-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ABONO' }, (payload) => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ABONO' }, () => {
                 const mainApp = document.getElementById('app');
                 if (mainApp) renderAbonosView(mainApp);
             }).subscribe();
     }
 
     container.innerHTML = `
-        <div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <!-- Header Neo-Medical -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <!-- Header -->
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">Módulo de Finanzas</h2>
-                    <p class="text-secondary text-sm font-medium mt-1">Control de ingresos y flujo de caja (Cloud)</p>
+                    <h2 class="text-2xl lg:text-3xl font-display font-extrabold text-dark tracking-tight">Finanzas</h2>
+                    <p class="text-secondary text-sm font-medium mt-1">Control de ingresos y flujo de caja</p>
                 </div>
-                <button id="btn-registrar-abono" class="sach-button variant-set bg-accent shadow-glow flex items-center gap-2 group hover:scale-105 transition-all">
-                    <svg class="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                        <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" />
-                        <path d="M12 5V21" stroke-linecap="round" />
-                    </svg>
-                    Registrar Abono
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button id="btn-registrar-abono" class="sach-button variant-set bg-accent shadow-glow flex items-center gap-2 group">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span class="text-sm">Registrar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="flex flex-wrap items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <select id="filter-fecha" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold" onchange="window.filterAbonos()">
+                    <option value="all">Todas las fechas</option>
+                    <option value="today">Hoy</option>
+                    <option value="week">Esta semana</option>
+                    <option value="month" selected>Este mes</option>
+                </select>
+                <select id="filter-metodo" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold" onchange="window.filterAbonos()">
+                    <option value="all">Todos los métodos</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Cheque">Cheque</option>
+                </select>
+                <span id="abono-count" class="text-xs font-bold text-slate-400 ml-auto">${abonosList.length} registros</span>
             </div>
 
             <!-- Financial Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                ${renderFinanceCard('Total Recaudado', formatCurrency(total), 'bg-emerald-50 text-emerald-600', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2')}
-                ${renderFinanceCard('Abonos Registrados', count, 'bg-accent/10 text-accent', 'M7 4L7 13C7 15.7614 9.23858 18 12 18C14.7614 18 17 15.7614 17 13L17 4')}
-                ${renderFinanceCard('Presupuesto Global', formatCurrency(totalPresupuestos), 'bg-primary/10 text-primary', 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z')}
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                ${renderFinanceCard('Este Mes', formatCurrency(monthEarnings), 'bg-emerald-50 text-emerald-600', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', 'green')}
+                ${renderFinanceCard('Total General', formatCurrency(total), 'bg-primary/10 text-primary', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2', 'primary')}
+                ${renderFinanceCard('Promedio', formatCurrency(average), 'bg-accent/10 text-accent', 'M9 7h6m0 10v-3m-4 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', 'accent')}
+                ${renderFinanceCard('Transacciones', count, 'bg-purple-50 text-purple-600', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2 2 2 0 012 2', 'purple')}
             </div>
 
             <!-- Transaction History Table -->
-            <div class="bg-white rounded-card shadow-soft border border-black/5 overflow-hidden">
-                <div class="px-8 py-6 border-b border-black/5 flex justify-between items-center bg-slate-50/10">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-4 lg:px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke-width="2"/></svg>
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                             <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke-width="2"/></svg>
                         </div>
-                        <h3 class="font-bold text-lg text-dark">Historial de Transacciones</h3>
-                    </div>
-                    <div class="flex gap-2">
-                         <button class="px-4 py-2 bg-white border border-slate-100 rounded-xl text-[10px] font-bold text-secondary uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-sm">Exportar Reporte</button>
+                        <h3 class="font-bold text-base text-dark">Historial</h3>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
-                            <tr class="bg-slate-50/30">
-                                <th class="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fecha & Hora</th>
-                                <th class="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Responsable</th>
-                                <th class="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Método de Pago</th>
-                                <th class="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Monto Neto</th>
-                                <th class="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Saldo Pendiente</th>
+                            <tr class="bg-slate-50/50">
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Fecha</th>
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Responsable</th>
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">IDENTIFICACIÓN</th>
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Método</th>
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Abono</th>
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Pendiente</th>
+                                <th class="px-3 py-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody id="abonos-list-body" class="divide-y divide-slate-50">
-                            ${abonosList.length > 0 ? abonosList.map(renderAbonoRow).join('') : `
+                            ${abonosList.length > 0 ? abonosList.slice(0, 20).map(a => renderAbonoRow(a, pacientesMap)).join('') : `
                                 <tr>
-                                    <td colspan="4" class="px-8 py-32">
-                                        <div class="flex flex-col items-center justify-center text-center space-y-4 opacity-40">
-                                            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" stroke-width="2"/></svg>
-                                            </div>
-                                            <p class="text-slate-400 font-bold text-sm tracking-tight italic">No se registran movimientos financieros.</p>
+                                    <td colspan="7" class="px-4 py-16 text-center">
+                                        <div class="flex flex-col items-center text-slate-400 gap-2">
+                                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" stroke-width="2"/></svg>
+                                            <p class="text-xs font-medium">No hay transacciones registradas</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -119,54 +159,90 @@ export async function renderAbonosView(container) {
                         </tbody>
                     </table>
                 </div>
+                ${abonosList.length > 20 ? `
+                <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-center">
+                    <span class="text-xs text-slate-400">Mostrando 20 de ${abonosList.length} transacciones</span>
+                </div>
+                ` : ''}
             </div>
         </div>
 
-        <!-- Popups & Modals Integrated -->
         ${renderAbonoModal()}
     `;
 
     setupAbonoLogic(abonosList);
 }
 
-function renderFinanceCard(title, value, colorClass, path) {
+function renderFinanceCard(title, value, colorClass, path, colorKey = 'primary') {
+    const colorMap = {
+        green: { bg: 'bg-emerald-500', text: 'text-white' },
+        primary: { bg: 'bg-primary', text: 'text-white' },
+        accent: { bg: 'bg-accent', text: 'text-white' },
+        purple: { bg: 'bg-purple-500', text: 'text-white' }
+    };
+    const btnColor = colorMap[colorKey] || colorMap.primary;
+    
     return `
-        <div class="bg-white p-8 rounded-card border border-black/5 shadow-soft flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300">
-            <div class="space-y-1.5">
-                <p class="text-secondary text-[10px] font-bold uppercase tracking-widest">${title}</p>
-                <h3 class="text-3xl font-display font-extrabold text-dark tabular-nums tracking-tighter">${value}</h3>
+        <div class="bg-white p-4 lg:p-5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between group hover:-translate-y-0.5 transition-all">
+            <div class="space-y-1">
+                <p class="text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest">${title}</p>
+                <h3 class="text-xl lg:text-2xl font-display font-extrabold text-dark tabular-nums tracking-tight">${value}</h3>
             </div>
-            <div class="w-14 h-14 ${colorClass} rounded-2xl flex items-center justify-center shadow-sm">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="${path}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="w-10 h-10 lg:w-12 lg:h-12 ${colorClass} rounded-xl flex items-center justify-center">
+                <svg class="w-5 lg:w-6 h-5 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="${path}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
         </div>
     `;
 }
 
-function renderAbonoRow(a) {
+function renderAbonoRow(a, pacientesMap = {}) {
     const dataObj = new Date(a.created_at || a.FECHA);
-    const dateFormatted = dataObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dateFormatted = dataObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
     const timeFormatted = dataObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Obtener datos del paciente
+    const paciente = pacientesMap[a['ID_PACIENTE']] || {};
+    const idPaciente = a['ID_PACIENTE'] || 'S/D';
+    const nombrePaciente = a['RESPONSABLE'] || paciente['NOMBRE DEL PACIENTE'] || 'S/N';
+    
+    // Calcular total (abono + saldo pendiente)
+    const montoAbono = parseFloat(a.ABONO) || 0;
+    const saldoPendiente = parseFloat(a.SALDO) || 0;
+    const montoTotal = montoAbono + saldoPendiente;
+    
+    const methodColors = {
+        'Efectivo': 'bg-green-50 text-green-600 border-green-100',
+        'Transferencia': 'bg-blue-50 text-blue-600 border-blue-100',
+        'Tarjeta': 'bg-purple-50 text-purple-600 border-purple-100',
+        'Cheque': 'bg-amber-50 text-amber-600 border-amber-100'
+    };
+    const methodClass = methodColors[a['TIPODEPAGO']] || 'bg-slate-50 text-slate-500 border-slate-100';
 
     return `
-        <tr class="hover:bg-slate-50/80 transition-all group">
-            <td class="px-8 py-5">
-                <div class="font-bold text-dark text-sm">${dateFormatted}</div>
-                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest tabular-nums mt-0.5">${timeFormatted}</div>
+        <tr class="hover:bg-slate-50/50 transition-all border-l-2 border-transparent hover:border-accent">
+            <td class="px-3 py-3">
+                <div class="font-bold text-dark text-xs">${dateFormatted}</div>
+                <div class="text-[9px] text-slate-400">${timeFormatted}</div>
             </td>
-            <td class="px-8 py-5">
-                <div class="font-bold text-dark text-sm truncate max-w-[200px]">${a['RESPONSABLE'] || 'S/N'}</div>
+            <td class="px-3 py-3">
+                <div class="font-semibold text-dark text-xs truncate max-w-[140px]" title="${nombrePaciente}">${nombrePaciente}</div>
             </td>
-            <td class="px-8 py-5">
-                 <span class="inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-extrabold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-tighter">
+            <td class="px-3 py-3">
+                <div class="font-mono text-slate-600 text-[10px]">${idPaciente}</div>
+            </td>
+            <td class="px-3 py-3">
+                 <span class="inline-flex items-center px-2 py-1 rounded-md text-[9px] font-semibold border ${methodClass}">
                     ${a['TIPODEPAGO'] || 'Otros'}
                  </span>
             </td>
-            <td class="px-8 py-5 text-right font-extrabold text-accent text-sm tabular-nums">
-                ${formatCurrency(a.ABONO)}
+            <td class="px-3 py-3 text-right font-bold text-emerald-600 text-xs">
+                ${formatCurrency(montoAbono)}
             </td>
-            <td class="px-8 py-5 text-right font-extrabold text-slate-400 text-sm tabular-nums">
-                ${a.SALDO !== null && a.SALDO !== undefined ? formatCurrency(a.SALDO) : '---'}
+            <td class="px-3 py-3 text-right font-bold ${saldoPendiente > 0 ? 'text-amber-500' : 'text-slate-400'} text-xs">
+                ${formatCurrency(saldoPendiente)}
+            </td>
+            <td class="px-3 py-3 text-right font-bold text-primary text-xs">
+                ${formatCurrency(montoTotal)}
             </td>
         </tr>
     `;
@@ -219,6 +295,65 @@ function renderAbonoModal() {
         </div>
     `;
 }
+
+window.filterAbonos = async function() {
+    const fechaFilter = document.getElementById('filter-fecha')?.value || 'all';
+    const metodoFilter = document.getElementById('filter-metodo')?.value || 'all';
+    const tbody = document.getElementById('abonos-list-body');
+    const countEl = document.getElementById('abono-count');
+    
+    if (!tbody) return;
+    
+    const { data: abonos } = await supabase.from('ABONO').select('*').order('created_at', { ascending: false });
+    const { data: pacientes } = await supabase.from('PACIENTES').select('id, "NOMBRE DEL PACIENTE", "NOMBRE REPRESENTANTE", "CELULAR DEL REPRESENTANTE", "CELULAR DEL PACIENTE"');
+    
+    const pacientesMap = {};
+    if (pacientes) {
+        pacientes.forEach(p => {
+            pacientesMap[p.id] = p;
+        });
+    }
+    
+    let filtered = abonos || [];
+    
+    const now = new Date();
+    
+    // Filtro por fecha
+    if (fechaFilter === 'today') {
+        const today = now.toISOString().split('T')[0];
+        filtered = filtered.filter(a => (a.created_at || a.FECHA || '').startsWith(today));
+    } else if (fechaFilter === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filtered = filtered.filter(a => new Date(a.created_at || a.FECHA) >= weekAgo);
+    } else if (fechaFilter === 'month') {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        filtered = filtered.filter(a => new Date(a.created_at || a.FECHA) >= monthStart);
+    }
+    
+    // Filtro por método
+    if (metodoFilter !== 'all') {
+        filtered = filtered.filter(a => a['TIPODEPAGO'] === metodoFilter);
+    }
+    
+    // Actualizar contador
+    if (countEl) countEl.textContent = `${filtered.length} registros`;
+    
+    // Renderizar
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-4 py-16 text-center">
+                    <div class="flex flex-col items-center text-slate-400 gap-2">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" stroke-width="2"/></svg>
+                        <p class="text-xs font-medium">No hay transacciones con esos filtros</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = filtered.slice(0, 20).map(a => renderAbonoRow(a, pacientesMap)).join('');
+    }
+};
 
 async function setupAbonoLogic() {
     // Carga de pacientes para el modal

@@ -38,41 +38,52 @@ export async function renderAgendaView(container) {
     }
 
     container.innerHTML = `
-        <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
             <!-- Header & Navegación del Dashboard -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
-                    <h2 class="text-3xl font-display font-extrabold text-dark tracking-tight">Agenda Médica</h2>
+                    <h2 class="text-2xl lg:text-3xl font-display font-extrabold text-dark tracking-tight">Agenda Médica</h2>
                     <p class="text-secondary text-sm font-medium mt-1">Control de sillones en tiempo real</p>
                 </div>
                 
                 <!-- Controles del header -->
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2 lg:gap-3">
+                    <!-- Selector de Odontólogo -->
+                    <select id="filter-doctor" class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-dark h-10 shadow-sm" onchange="window.filterAgendaByDoctor(this.value)">
+                        <option value="">Todos los doctores</option>
+                    </select>
+                    
+                    <!-- Contador de citas -->
+                    <div id="agenda-stats" class="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2">
+                        <span class="text-xs font-bold text-slate-500" id="total-citas">0</span>
+                        <span class="text-xs text-slate-400">citas</span>
+                    </div>
+                    
                     <!-- Botón Recordatorios -->
                     <button id="btn-recordatorios" onclick="window.openRecordatoriosModal()"
-                        class="relative flex items-center gap-2 px-4 py-2 sach-button !h-10 bg-amber-500 hover:bg-amber-600 text-white shadow-soft transition-all group">
-                        <!-- Ícono Bell -->
-                        <svg class="w-4 h-4 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        class="relative flex items-center gap-2 px-3 py-2 sach-button !h-10 bg-amber-500 hover:bg-amber-600 text-white shadow-soft transition-all group">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                         </svg>
-                        <span class="text-[11px] font-bold uppercase tracking-widest hidden sm:block">Recordatorios</span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest hidden md:block">Recordatorios</span>
                         <span id="badge-recordatorios" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center hidden">0</span>
                     </button>
-                    <!-- Selector Glassmorphism y Botón de Hoy -->
-                    <div class="flex items-center gap-2 bg-white/50 backdrop-blur-glass p-2 rounded-2xl border border-black/5 shadow-soft">
-                        <input type="date" id="agenda-date" class="bg-transparent border-none text-sm font-bold text-dark px-3 py-1.5 outline-none hover:bg-white/60 rounded-xl transition-colors cursor-pointer" value="${today}">
-                        <button id="btn-hoy" class="px-5 py-2 sach-button variant-set bg-primary shadow-soft !h-10">Hoy</button>
+                    
+                    <!-- Selector Fecha y Botón Hoy -->
+                    <div class="flex items-center gap-2 bg-white/80 backdrop-blur p-1.5 rounded-xl border border-slate-200 shadow-sm">
+                        <input type="date" id="agenda-date" class="bg-transparent border-none text-xs font-bold text-dark px-2 py-1 outline-none cursor-pointer" value="${today}">
+                        <button id="btn-hoy" class="px-3 py-1.5 sach-button variant-set bg-primary shadow-soft !h-8 text-xs font-bold">Hoy</button>
                     </div>
                 </div>
             </div>
 
             <!-- Agenda Grid -->
-            <div class="bg-white rounded-card shadow-soft border-0 overflow-hidden flex relative" id="agenda-root">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex relative" id="agenda-root">
                 
                 <!-- Time Labels -->
-                <div class="w-16 flex-shrink-0 border-r border-black/5 bg-slate-50/20 flex flex-col">
-                    <div class="h-14 border-b border-black/5 flex items-center justify-center">
+                <div class="w-12 lg:w-16 flex-shrink-0 border-r border-slate-100 bg-slate-50/30 flex flex-col">
+                    <div class="h-12 lg:h-14 border-b border-slate-100 flex items-center justify-center">
                         <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <div class="relative flex-grow pointer-events-none">
@@ -98,87 +109,87 @@ export async function renderAgendaView(container) {
 
         <!-- Appointment Modal (Simétrico) -->
         <div id="appointment-modal" class="sach-modal-backdrop opacity-0 pointer-events-none transition-all duration-300">
-            <div class="sach-modal w-full max-w-lg transform scale-95 transition-all duration-300" id="apt-modal-container">
-                <div class="flex justify-between items-center mb-10">
-                    <h3 class="text-2xl font-display font-extrabold text-dark tracking-tight">Agendar Cita Inteligente</h3>
-                    <button type="button" onclick="window.closeAptModal()" class="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
+            <div class="sach-modal w-full max-w-md transform scale-95 transition-all duration-300" id="apt-modal-container">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-display font-extrabold text-dark tracking-tight">Agendar Cita</h3>
+                    <button type="button" onclick="window.closeAptModal()" class="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
                     </button>
                 </div>
                 
-                <form id="new-appointment-form" class="space-y-6">
+                <form id="new-appointment-form" class="space-y-5">
                     <input type="hidden" id="apt-id">
-                    <div class="sach-input-container relative" id="patient-search-container">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-2 flex justify-between items-center">
-                            <span>Paciente Seleccionado</span>
-                            <button type="button" onclick="window.location.hash = '#pacientes'; window.closeAptModal();" class="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-md hover:bg-primary/20 transition-colors font-bold">+ Nuevo</button>
+                    
+                    <!-- Sección: Paciente -->
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex justify-between items-center">
+                            <span>Paciente</span>
+                            <button type="button" onclick="window.location.hash = '#pacientes'; window.closeAptModal();" class="text-[8px] bg-primary text-white px-2 py-1 rounded-md hover:bg-primary/80 transition-colors font-bold">+ Nuevo</button>
                         </p>
-                        <input type="text" id="apt-patient-search" class="sach-input bg-slate-50 h-12 font-bold px-4 w-full border border-black/5 rounded-xl placeholder:text-slate-400 focus:bg-white transition-colors" placeholder="Buscar paciente por nombre o CC..." autocomplete="off" required>
+                        <input type="text" id="apt-patient-search" class="sach-input bg-white h-10 text-sm font-semibold px-3 w-full border border-slate-200 rounded-lg placeholder:text-slate-400 focus:bg-white focus:border-primary transition-colors" placeholder="Buscar por nombre o cédula..." autocomplete="off" required>
                         <input type="hidden" id="apt-patient-id" required>
                         <span id="apt-patient-display" class="hidden"></span>
-                        
-                        <div id="apt-patient-dropdown" class="absolute top-[100%] left-0 w-full bg-white shadow-xl rounded-xl border border-black/5 mt-1 z-50 hidden max-h-56 overflow-y-auto">
-                        </div>
+                        <div id="apt-patient-dropdown" class="absolute top-[100%] left-0 w-full bg-white shadow-lg rounded-lg border border-slate-100 mt-1 z-50 hidden max-h-48 overflow-y-auto"></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Sección: Datos de la Cita -->
+                    <div class="grid grid-cols-2 gap-3">
                         <div class="sach-input-container">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Sillón Asignado</p>
-                            <select id="apt-chair" class="sach-input bg-white h-12 font-bold" required>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sillón</p>
+                            <select id="apt-chair" class="sach-input bg-white h-10 text-xs font-semibold" required>
                                 <option value="1">Sillón 01</option>
                                 <option value="2">Sillón 02</option>
                                 <option value="3">Sillón 03</option>
                             </select>
                         </div>
                         <div class="sach-input-container">
-                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Fecha de Cita</p>
-                             <input type="date" id="apt-date-input" class="sach-input bg-white h-12 font-bold cursor-pointer" value="${today}" required>
+                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Fecha</p>
+                             <input type="date" id="apt-date-input" class="sach-input bg-white h-10 text-xs font-semibold cursor-pointer" value="${today}" required>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Sección: Horario -->
+                    <div class="grid grid-cols-2 gap-3">
                         <div class="sach-input-container">
-                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Hora Inicio</p>
-                             <select id="apt-time-start" class="sach-input bg-white h-12 font-bold" required>
+                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Inicio</p>
+                             <select id="apt-time-start" class="sach-input bg-white h-10 text-xs font-semibold" required>
                                  ${SLOTS.map(t => `<option value="${t}">${t}</option>`).join('')}
                              </select>
                         </div>
                         <div class="sach-input-container">
-                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Hora Fin</p>
-                             <select id="apt-time-end" class="sach-input bg-white h-12 font-bold" required>
+                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Fin</p>
+                             <select id="apt-time-end" class="sach-input bg-white h-10 text-xs font-semibold" required>
                                  ${SLOTS.map(t => `<option value="${t}">${t}</option>`).join('')}
                              </select>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Sección: Médica -->
+                    <div class="grid grid-cols-2 gap-3">
                         <div class="sach-input-container">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Médico Tratante</p>
-                            <select id="apt-doctor" class="sach-input bg-white h-12 font-bold" required>
-                                <option value="">Seleccione Odontólogo...</option>
-                                <option value="Dra. Lucía Quintero">Dra. Lucía Quintero</option>
-                                <option value="Dr. Sergio Arboleda">Dr. Sergio Arboleda</option>
-                                <option value="Dr. Juan Manuel Santos">Dr. Juan Manuel Santos</option>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Odontólogo</p>
+                            <select id="apt-doctor" class="sach-input bg-white h-10 text-xs font-semibold" required>
+                                <option value="">Cargando...</option>
                             </select>
                         </div>
                         <div class="sach-input-container">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Estado</p>
-                            <select id="apt-status" class="sach-input bg-white h-12 font-bold">
-                                <option value="Pendiente">🟡 PENDIENTE</option>
-                                <option value="Confirmada">🟢 CONFIRMADA</option>
-                                <option value="Cancelada">🔴 CANCELADA</option>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Estado</p>
+                            <select id="apt-status" class="sach-input bg-white h-10 text-xs font-semibold">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Confirmada">Confirmada</option>
+                                <option value="Cancelada">Cancelada</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="sach-input-container">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 ml-2">Motivo Principal</p>
-                        <textarea id="apt-reason" class="sach-input bg-white !h-24 pt-4 resize-none" placeholder="Diagnóstico, control, endodoncia..." required></textarea>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Motivo / Tratamiento</p>
+                        <textarea id="apt-reason" class="sach-input bg-white !h-16 !py-2 text-xs resize-none" placeholder="Ej: Control, endodoncia..." required></textarea>
                     </div>
 
-                    <div class="flex gap-4 pt-4">
-                        <button type="submit" id="btn-submit-apt" class="flex-grow sach-button variant-set bg-primary !h-12 shadow-soft">Confirmar Agendamiento</button>
-                        <button type="button" onclick="window.closeAptModal()" class="sach-button variant-unset !h-12 border-none hover:bg-slate-100">Cerrar</button>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" id="btn-submit-apt" class="flex-grow sach-button variant-set bg-primary !h-11 shadow-soft text-sm font-bold">Confirmar</button>
+                        <button type="button" onclick="window.closeAptModal()" class="sach-button variant-unset !h-11 border-none hover:bg-slate-100 text-sm font-bold px-4">Cancelar</button>
                     </div>
                 </form>
             </div>
@@ -187,9 +198,9 @@ export async function renderAgendaView(container) {
         <!-- Reagendar Modal -->
         <div id="reagendar-modal" class="sach-modal-backdrop opacity-0 pointer-events-none transition-all duration-300">
             <div class="sach-modal w-full max-w-sm transform scale-95 transition-all duration-300" id="reagendar-modal-container">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-display font-extrabold text-dark tracking-tight">Reagendar Cita</h3>
-                    <button type="button" onclick="window.closeReagendarModal()" class="w-8 h-8 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-colors">
+                <div class="flex justify-between items-center mb-5">
+                    <h3 class="text-lg font-display font-extrabold text-dark tracking-tight">Reagendar Cita</h3>
+                    <button type="button" onclick="window.closeReagendarModal()" class="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
                     </button>
                 </div>
@@ -199,25 +210,25 @@ export async function renderAgendaView(container) {
                     <input type="hidden" id="reagendar-sillon-id">
                     <input type="hidden" id="reagendar-paciente-id">
                     <div class="sach-input-container">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-2">Nueva Fecha</p>
-                        <input type="date" id="reagendar-date" class="sach-input bg-white h-12 font-bold cursor-pointer" required>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nueva Fecha</p>
+                        <input type="date" id="reagendar-date" class="sach-input bg-white h-10 text-xs font-semibold cursor-pointer" required>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-3">
                         <div class="sach-input-container">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-2">Nueva Hora Inicio</p>
-                            <select id="reagendar-time-start" class="sach-input bg-white h-12 font-bold" required>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nueva Hora Inicio</p>
+                            <select id="reagendar-time-start" class="sach-input bg-white h-10 text-xs font-semibold" required>
                                 ${SLOTS.map(t => `<option value="${t}">${t}</option>`).join('')}
                             </select>
                         </div>
                         <div class="sach-input-container">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-2">Nueva Hora Fin</p>
-                            <select id="reagendar-time-end" class="sach-input bg-white h-12 font-bold" required>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nueva Hora Fin</p>
+                            <select id="reagendar-time-end" class="sach-input bg-white h-10 text-xs font-semibold" required>
                                 ${SLOTS.map(t => `<option value="${t}">${t}</option>`).join('')}
                             </select>
                         </div>
                     </div>
-                    <div class="pt-4">
-                        <button type="submit" id="btn-submit-reagendar" class="w-full sach-button variant-set bg-accent !h-12 shadow-soft">Confirmar</button>
+                    <div class="pt-2">
+                        <button type="submit" id="btn-submit-reagendar" class="w-full sach-button variant-set bg-primary !h-11 shadow-soft text-sm font-bold">Confirmar</button>
                     </div>
                 </form>
             </div>
@@ -281,11 +292,11 @@ export async function renderAgendaView(container) {
 
 function renderTimeLabels() {
     let html = '';
-    // Etiquetas de hora para la visualización izquierda. h-16 representa 30 Minutos (64px).
+    // Etiquetas de hora más compactas
     SLOTS.forEach(t => {
         html += `
-            <div class="h-16 relative flex justify-center border-b border-black/5 last:border-0 box-border">
-                <span class="absolute -top-[9px] px-1 text-[10px] font-bold text-slate-400 font-display" style="background-color: var(--bg-light);">${t}</span>
+            <div class="h-12 lg:h-16 relative flex justify-center border-b border-slate-100 last:border-0 box-border">
+                <span class="absolute -top-2 lg:-top-[9px] px-1 text-[9px] lg:text-[10px] font-bold text-slate-400 font-display" style="background-color: var(--bg-light);">${t}</span>
             </div>
         `;
     });
@@ -295,22 +306,26 @@ function renderTimeLabels() {
 function renderChairColumn(chairId, label) {
     let slotsHtml = '';
 
-    // Todos los slots miden exactamente 64px (h-16) para mantener simetría matemática
+    // Slots más compactos: h-12 (48px) móvil, h-16 (64px) lg
     SLOTS.forEach(t => {
         slotsHtml += `
-            <div class="h-16 p-1.5 border-b border-black/5 hover:bg-slate-50/50 transition-colors box-border" id="slot-${chairId}-${t.replace(':', '')}">
+            <div class="h-12 lg:h-16 p-1 border-b border-slate-100 hover:bg-slate-50/50 transition-colors box-border" id="slot-${chairId}-${t.replace(':', '')}">
                 <!-- Estado NO SETEADO -->
-                <button type="button" class="w-full h-full rounded-[10px] bg-white/40 border-2 border-dashed border-primary/20 hover:bg-primary/5 hover:border-primary/50 transition-all flex items-center justify-center group cursor-pointer shadow-sm" onclick="window.openNewAptModal('${t}', ${chairId})">
-                    <span class="text-xs font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm">+ Nuevo en ${t}</span>
+                <button type="button" class="w-full h-full rounded-lg lg:rounded-[10px] bg-white border border-dashed border-slate-200 lg:border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-all flex items-center justify-center group cursor-pointer" onclick="window.openNewAptModal('${t}', ${chairId})">
+                    <span class="text-[10px] lg:text-xs font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">+ ${t}</span>
                 </button>
             </div>
         `;
     });
 
+    const chairColors = ['bg-blue-50', 'bg-emerald-50', 'bg-purple-50'];
+    const chairBorders = ['border-blue-200', 'border-emerald-200', 'border-purple-200'];
+    const chairTexts = ['text-blue-600', 'text-emerald-600', 'text-purple-600'];
+
     return `
-        <div class="flex-1 min-w-[220px] border-r border-black/5 last:border-0 flex flex-col bg-white">
-            <div class="h-14 sticky top-0 bg-white/95 backdrop-blur-glass z-20 flex items-center justify-center border-b border-black/5 shadow-sm">
-                <span class="text-xs font-display font-extrabold text-primary uppercase tracking-widest">${label}</span>
+        <div class="flex-1 min-w-[160px] lg:min-w-[200px] border-r border-slate-100 last:border-0 flex flex-col ${chairColors[chairId-1]}">
+            <div class="h-12 lg:h-14 sticky top-0 bg-white/95 backdrop-blur z-20 flex items-center justify-center border-b ${chairBorders[chairId-1]} shadow-sm">
+                <span class="text-[10px] lg:text-xs font-display font-extrabold ${chairTexts[chairId-1]} uppercase tracking-widest">${label}</span>
             </div>
             <div class="relative w-full">
                 ${slotsHtml}
@@ -320,6 +335,48 @@ function renderChairColumn(chairId, label) {
 }
 
 async function setupAgendaLogic() {
+    // Cargar odontólogos en filtro de agenda
+    const filterDoctor = document.getElementById('filter-doctor');
+    if (filterDoctor) {
+        const { data: odontologos } = await supabase
+            .from('ODONTOLOGOS')
+            .select('ODONTOLOGO')
+            .neq('ODONTOLOGO', 'ADMINISTRADORSACH')
+            .order('ODONTOLOGO', { ascending: true });
+        
+        if (odontologos && odontologos.length > 0) {
+            odontologos.forEach(o => {
+                const option = document.createElement('option');
+                option.value = o.ODONTOLOGO;
+                option.textContent = o.ODONTOLOGO;
+                filterDoctor.appendChild(option);
+            });
+        }
+    }
+
+    // Cargar odontólogos en modal de cita
+    const doctorSelect = document.getElementById('apt-doctor');
+    if (doctorSelect) {
+        const { data: odontologos, error } = await supabase
+            .from('ODONTOLOGOS')
+            .select('ODONTOLOGO')
+            .neq('ODONTOLOGO', 'ADMINISTRADORSACH')
+            .order('ODONTOLOGO', { ascending: true });
+        
+        if (!error && odontologos && odontologos.length > 0) {
+            doctorSelect.innerHTML = '<option value="">Seleccionar...</option>';
+            odontologos.forEach(o => {
+                const option = document.createElement('option');
+                option.value = o.ODONTOLOGO;
+                option.textContent = o.ODONTOLOGO;
+                doctorSelect.appendChild(option);
+            });
+        } else {
+            doctorSelect.innerHTML = '<option value="">Sin odontólogos</option>';
+            console.log('Error cargando odontólogos:', error);
+        }
+    }
+
     const form = document.getElementById('new-appointment-form');
 
     const searchInput = document.getElementById('apt-patient-search');
@@ -354,8 +411,8 @@ async function setupAgendaLogic() {
                 if (searchResults && searchResults.length > 0) {
                     searchResults.forEach(p => {
                         const div = document.createElement('div');
-                        div.className = 'px-4 py-3 hover:bg-primary/5 cursor-pointer border-b border-black/5 last:border-0 transition-colors';
-                        div.innerHTML = `<p class="text-sm font-bold text-dark">${p['NOMBRE DEL PACIENTE']}</p><p class="text-[10px] text-slate-500 font-medium">CC: ${p['ID DEL PACIENTE']}</p>`;
+                        div.className = 'px-3 py-2 hover:bg-primary/5 cursor-pointer border-b border-slate-100 last:border-0 transition-colors';
+                        div.innerHTML = `<p class="text-xs font-semibold text-dark">${p['NOMBRE DEL PACIENTE']}</p><p class="text-[9px] text-slate-500 font-medium">CC: ${p['ID DEL PACIENTE']}</p>`;
                         div.addEventListener('click', () => {
                             idInput.value = p.id;
                             searchInput.value = p['NOMBRE DEL PACIENTE'];
@@ -607,6 +664,14 @@ function showSuccessAlert(msg) {
     }, 3000);
 }
 
+let currentAgendaFilter = '';
+
+window.filterAgendaByDoctor = (doctor) => {
+    currentAgendaFilter = doctor;
+    const fecha = document.getElementById('agenda-date')?.value || new Date().toISOString().split('T')[0];
+    loadAppointmentsDate(fecha);
+};
+
 async function loadAppointmentsDate(dateString) {
     // Resetear a NO SETEADO
     SLOTS.forEach(time => {
@@ -614,19 +679,30 @@ async function loadAppointmentsDate(dateString) {
             const el = document.getElementById(`slot-${c}-${time.replace(':', '')}`);
             if (el) {
                 el.innerHTML = `
-                    <button type="button" class="w-full h-full rounded-[10px] bg-white/40 border-2 border-dashed border-primary/20 hover:bg-primary/5 hover:border-primary/50 transition-all flex items-center justify-center group cursor-pointer shadow-sm" onclick="window.openNewAptModal('${time}', ${c})">
-                        <span class="text-xs font-bold text-primary opacity-0 group-hover:opacity-100">+ Nuevo en ${time}</span>
+                    <button type="button" class="w-full h-full rounded-lg lg:rounded-[10px] bg-white border border-dashed border-slate-200 lg:border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-all flex items-center justify-center group cursor-pointer" onclick="window.openNewAptModal('${time}', ${c})">
+                        <span class="text-[10px] lg:text-xs font-bold text-primary opacity-0 group-hover:opacity-100">+ ${time}</span>
                     </button>
                 `;
             }
         });
     });
 
-    const { data: filteredData } = await supabase.from('CITAS').select('*').eq('FECHA DE CITA', dateString);
+    let query = supabase.from('CITAS').select('*').eq('FECHA DE CITA', dateString);
+    
+    const { data: filteredData } = await query;
     const filtered = filteredData || [];
 
-    // Filter out canceled ones just in case but the query above gets all chairs for that date
-    filtered.filter(a => a.ESTADO !== 'Cancelada').forEach(a => renderAppointmentNode(a));
+    // Aplicar filtro de doctor si existe
+    const citasFiltradas = currentAgendaFilter 
+        ? filtered.filter(a => a['MEDICO TRATANTE'] === currentAgendaFilter)
+        : filtered;
+
+    // Actualizar contador
+    const countEl = document.getElementById('total-citas');
+    if (countEl) countEl.textContent = citasFiltradas.length;
+
+    // Renderizar citas (excluyendo canceladas)
+    citasFiltradas.filter(a => a.ESTADO !== 'Cancelada').forEach(a => renderAppointmentNode(a));
 }
 
 function renderAppointmentNode(apt) {
